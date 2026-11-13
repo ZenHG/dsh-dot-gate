@@ -1,0 +1,64 @@
+{
+  "_spdx": "SPDX-License-Identifier: MIT",
+  "_what": "Worked input for scripts/gen-pack.mjs. The checks list is optional: it asserts that the domain needs these atoms and lets the generator confirm the default composition covers them. It cannot add or remove a rule. Copy this file, replace the domain facts, and run the generator into an empty directory.",
+  "domain": "tidal-weir-siltation",
+  "title": "Tidal weir siltation study",
+  "description": "Claims about whether silt deposition at a tidal weir can be established from surface imagery alone.",
+  "words": [
+    "cannot be inferred",
+    "impossible",
+    "no way to tell",
+    "does not work"
+  ],
+  "paths": [
+    "Wiki/"
+  ],
+  "quantities": [
+    {
+      "name": "silt.deposition_mm",
+      "measures": "mean silt depth on the upstream sill, in millimetres",
+      "standing": "active"
+    },
+    {
+      "name": "flow.residual_cm_s",
+      "measures": "residual current at the weir crest, in centimetres per second",
+      "standing": "caveat"
+    },
+    {
+      "name": "silt.visual_fraction",
+      "measures": "operator-estimated silt fraction from a surface photograph",
+      "standing": "deprecated"
+    }
+  ],
+  "liveVars": [
+    {
+      "name": "gate_opening_m",
+      "why": "both arms must hold the gate at the same opening or discharge differs",
+      "status": "LIVE"
+    },
+    {
+      "name": "instrument_depth_m",
+      "why": "the turbidity probe must sit at the same depth in both arms",
+      "status": "LIVE"
+    },
+    {
+      "name": "tide_stage_m",
+      "why": "tide stage moves during a field run and cannot be held constant",
+      "status": "UNKNOWN"
+    }
+  ],
+  "evidenceFloor": {
+    "minSources": 3,
+    "minRuns": 2
+  },
+  "checks": [
+    "sources>=minSources",
+    "counter_search_done",
+    "counter_search_clear",
+    "metric_registered",
+    "metric_not_deprecated",
+    "var_live",
+    "repro_present",
+    "runs>=minRuns"
+  ]
+}
