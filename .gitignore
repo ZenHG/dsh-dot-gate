@@ -3,7 +3,6 @@ node_modules/
 .pnpm-store/
 
 # --- build & tool output ------------------------------------------------------
-native/target/
 dist/
 build/
 coverage/
@@ -26,6 +25,11 @@ yarn-error.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# --- local development documents -----------------------------------------------
+# Working rules for whoever edits this repo (agent or human). They describe *our*
+# process, not the package, so they stay on the machine that runs them.
+AGENTS.md
 
 # --- internal research --------------------------------------------------------
 # Competitor source breakdowns, official-capability notes and paper digests.

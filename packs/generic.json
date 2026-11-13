@@ -1,0 +1,79 @@
+{
+  "$schema": "../pack.schema.json",
+  "schemaVersion": 2,
+  "name": "generic",
+  "description": "Domain-free default. The rules are general; the registries start empty so that a project fills in its own quantities rather than inheriting someone else's.",
+  "paths": [
+    "Wiki/"
+  ],
+  "words": [
+    "cannot be done",
+    "does not work",
+    "impossible",
+    "做不到",
+    "不区分",
+    "不可得"
+  ],
+  "thresholds": {
+    "minSources": 3,
+    "minRuns": 3
+  },
+  "rules": {
+    "R1": {
+      "checks": [
+        {
+          "atom": "sources>=minSources"
+        }
+      ]
+    },
+    "R2": {
+      "when": "negative",
+      "checks": [
+        {
+          "atom": "counter_search_done"
+        },
+        {
+          "atom": "counter_search_clear"
+        }
+      ]
+    },
+    "R3": {
+      "checks": [
+        {
+          "atom": "metric_registered",
+          "over": "metrics"
+        },
+        {
+          "atom": "metric_not_deprecated",
+          "over": "metrics"
+        }
+      ]
+    },
+    "R4": {
+      "checks": [
+        {
+          "atom": "var_live",
+          "over": "contrast.diff_vars"
+        }
+      ]
+    },
+    "R5": {
+      "checks": [
+        {
+          "atom": "repro_present"
+        }
+      ]
+    }
+  },
+  "warnings": {
+    "W1": {
+      "checks": [
+        {
+          "atom": "runs>=minRuns"
+        }
+      ]
+    }
+  },
+  "metrics": {},
+  "liveVars": {}
+}

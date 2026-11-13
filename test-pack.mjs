@@ -7,6 +7,9 @@ import { join } from 'node:path'
 import { loadPack, validatePack, PACK_SCHEMA_VERSION } from './src/pack.mjs'
 import { checkVerdict } from './src/verdict.mjs'
 
+const H3_PATH = join(process.cwd(), 'packs', 'examples', 'h3-camera-study.json')
+const loadH3 = () => loadPack(H3_PATH)
+
 const baseVerdict = (over) => ({
   claim: 'x', polarity: 'observation',
   sources: [{ url: 'a' }, { url: 'b' }, { url: 'c' }],
@@ -16,11 +19,20 @@ const baseVerdict = (over) => ({
   ...over,
 })
 
-test('the shipped pack loads and validates', () => {
-  const { pack } = loadPack()
+test('the example domain pack loads and validates', () => {
+  const { pack } = loadH3()
   assert.equal(pack.schemaVersion, PACK_SCHEMA_VERSION)
-  assert.equal(pack.name, 'evidence-for-capability-claims')
+  assert.equal(pack.name, 'h3-camera-study')
   assert.ok(Object.keys(pack.metrics).length > 0)
+})
+
+test('the packaged default is domain-free', () => {
+  const { pack } = loadPack()
+  assert.equal(pack.name, 'generic')
+  assert.deepEqual(Object.keys(pack.metrics), [])
+  assert.deepEqual(Object.keys(pack.liveVars), [])
+  // Same mechanisms, no borrowed quantities: a project registers its own before it can cite one.
+  assert.ok(Object.keys(pack.rules).length >= 5)
 })
 
 test('a newer schemaVersion is refused', () => {
@@ -28,14 +40,14 @@ test('a newer schemaVersion is refused', () => {
 })
 
 test('an unknown status is refused with its key', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   const broken = structuredClone(pack)
   broken.metrics['farband.far_scale_est'].status = 'fine-probably'
   assert.throws(() => validatePack(broken), /metrics\.farband\.far_scale_est\.status/)
 })
 
 test('pack thresholds reach the rule', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   const strict = structuredClone(pack)
   strict.thresholds.minSources = 5
   const r = checkVerdict(baseVerdict(), { pack: strict })
@@ -44,7 +56,7 @@ test('pack thresholds reach the rule', () => {
 })
 
 test('a pack can switch a rule off', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   const onlySources = structuredClone(pack)
   onlySources.rules = { R1: pack.rules.R1 }
   const r = checkVerdict(baseVerdict({ polarity: 'negative' }), { pack: onlySources })
@@ -54,26 +66,29 @@ test('a pack can switch a rule off', () => {
   assert.equal(r.pass, true)
 })
 
-test('without a pack the inline defaults still work', () => {
-  assert.equal(checkVerdict(baseVerdict()).pass, true)
+test('without a pack, the default refuses quantities it does not know', () => {
+  // This is the general-tool behaviour: the mechanism ships, the quantities do not.
+  const r = checkVerdict(baseVerdict())
+  assert.equal(r.pass, false)
+  assert.match(r.fails.join(' '), /R3-METRIC/)
 })
 
 test('an unknown atom is refused at load, naming the key', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   const broken = structuredClone(pack)
   broken.rules.R1.checks = [{ atom: 'looks-fine-to-me' }]
   assert.throws(() => validatePack(broken), /rules\.R1\.checks\.0\.atom/)
 })
 
 test('an unknown "over" path is refused', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   const broken = structuredClone(pack)
   broken.rules.R3.checks[0].over = 'anything.at.all'
   assert.throws(() => validatePack(broken), /over/)
 })
 
 test('editing an expression changes behaviour without touching code', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   // Background: this verdict cites a metric that is registered but unfit to stand alone.
   const cites = baseVerdict({ metrics: ['bgscale.div_periph'] })
   assert.equal(checkVerdict(cites, { pack }).pass, false)
@@ -85,7 +100,7 @@ test('editing an expression changes behaviour without touching code', () => {
 })
 
 test('a rule cannot read another rule\'s outcome', () => {
-  const { pack } = loadPack()
+  const { pack } = loadH3()
   const broken = structuredClone(pack)
   broken.rules.R2.checks = [{ atom: 'metric_registered', over: 'metrics' }, { atom: 'R1-result' }]
   assert.throws(() => validatePack(broken), /atom/)

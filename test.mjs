@@ -243,7 +243,7 @@ test('does not steer when nothing was hit', () => {
 
 test('reads its words from the pack, not from a hard-coded copy', async () => {
   const scratch = mkdtempSync(join(tmpdir(), 'dotgate-pack-'))
-  const base = JSON.parse(readFileSync(join(process.cwd(), 'packs', 'evidence-for-capability-claims.json'), 'utf8'))
+  const base = JSON.parse(readFileSync(join(process.cwd(), 'packs', 'generic.json'), 'utf8'))
   base.words = ['banana']
   const packPath = join(scratch, 'p.json')
   writeFileSync(packPath, JSON.stringify(base), 'utf8')

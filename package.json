@@ -19,6 +19,7 @@
   "exports": {
     ".": "./index.js",
     "./verdict": "./src/verdict.mjs",
+    "./evaluate": "./src/evaluate.mjs",
     "./pack": "./src/pack.mjs",
     "./package.json": "./package.json"
   },
@@ -35,7 +36,8 @@
     "skills/",
     "packs/",
     "src/pack.mjs",
-    "test-pack.mjs"
+    "test-pack.mjs",
+    "src/evaluate.mjs"
   ],
   "os": [
     "win32",

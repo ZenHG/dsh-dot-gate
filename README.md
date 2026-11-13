@@ -69,19 +69,27 @@ reloads; Node code does not.
 
 ## Judgement pack
 
-What counts as enough evidence lives in one JSON file, `packs/evidence-for-capability-claims.json`,
-read by both implementations. It carries data only: the words that mark a claim, the watched
-paths, the thresholds, the registered quantities and their liveness.
+What counts as enough evidence lives in one JSON file, read by both implementations. It
+carries data only: the words that mark a claim, the watched paths, the thresholds, the
+registered quantities and their liveness.
 
-`rules` **selects** which checks run; it never describes how they work. A pack that started
-describing rule logic would be a rule engine, which is a much larger decision - and one this
-project has already declined once (see `.out-of-scope/vendor-state-machines.md`).
+Two packs ship:
 
-Why one file and not two: the registry used to exist twice, inline in the JS engine and as two
-JSON files next to the Python gate. Nothing compared them. `npm run crosscheck` now prints the
-pack hash it used, so a disagreement about data shows up as a disagreement about verdicts.
+| pack | what it is |
+|---|---|
+| `packs/generic.json` | **the default**. Same rules, **empty registries** - the mechanism without anyone's quantities |
+| `packs/examples/h3-camera-study.json` | a filled-in example: evidence standards for camera-movement claims in a video-model study |
 
-## The skill it ships
+That split is the point. A general tool must not ship with one project's measurement names
+baked in; a project either fills in `metrics`/`liveVars` or points `packPath` at its own file.
+Until a quantity is registered, citing it is refused - which is the intended first-run
+experience, not a bug.
+
+`rules` **composes** atoms from a closed vocabulary; it never invents one. A pack that names
+an unknown atom is refused at load, with the key. A rule that referenced another rule's
+outcome would be a state machine, so that is refused too.
+
+## The skill it ships## The skill it ships
 
 The package also contributes a skill named `dot`, through the official skill
 registry rather than through a profile path:

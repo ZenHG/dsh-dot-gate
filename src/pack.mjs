@@ -26,7 +26,7 @@ const KNOWN_STATUSES = new Set([
 ])
 
 export function defaultPackPath() {
-  return join(dirname(fileURLToPath(import.meta.url)), '..', 'packs', 'evidence-for-capability-claims.json')
+  return join(dirname(fileURLToPath(import.meta.url)), '..', 'packs', 'generic.json')
 }
 
 function fail(key, want, got) {

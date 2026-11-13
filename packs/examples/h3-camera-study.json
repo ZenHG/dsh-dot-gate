@@ -1,8 +1,8 @@
 {
-  "$schema": "./pack.schema.json",
+  "$schema": "../../pack.schema.json",
   "schemaVersion": 2,
-  "name": "evidence-for-capability-claims",
-  "description": "What counts as enough evidence before a negative capability claim is written down.",
+  "name": "h3-camera-study",
+  "description": "Reference domain pack: evidence standards for camera-movement claims in a video-model study. Shipped as an example of how to fill the registries, not as a default.",
   "paths": [
     "Wiki/"
   ],

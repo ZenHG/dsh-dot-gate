@@ -38,7 +38,10 @@ if (!existsSync(SAMPLES)) {
 const files = readdirSync(SAMPLES).filter((n) => n.endsWith('.json'))
 
 // Both implementations must read the same pack, or "they agree" means nothing.
-const { pack, path: packPath } = loadPack()
+// The packaged default is domain-free; the samples are H3 verdicts, so the comparison runs
+// against the example domain pack. That is also the intended usage: a project picks a pack.
+const examplePack = process.env.DOT_PACK || join(HERE, '..', 'packs', 'examples', 'h3-camera-study.json')
+const { pack, path: packPath } = loadPack(examplePack)
 const packHash = createHash('sha256').update(readFileSync(packPath)).digest('hex').slice(0, 12)
 console.log('pack=' + pack.name + ' hash=' + packHash)
 let disagree = 0

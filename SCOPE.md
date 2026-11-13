@@ -35,3 +35,10 @@ Read them before proposing something.
 - **No network, no files, no persistence.** It reads tool arguments in memory
   and nothing else.
 - **No model-specific tuning.** Phrases are configuration, not code.
+- **No client UI.** DSH's client half has no React runtime; a badge is not worth a build chain.
+- **No multi-platform Rust CLI.** Every consumer of a DSH plugin has Node, so a prebuilt binary
+  answers a question nobody asks.
+- **No rules that reference other rules.** That is a state machine, not a checker; the loader
+  refuses the atom that would express it.
+- **No model-authored rules.** A gate whose rules an agent can write is a gate an agent can
+  satisfy without evidence.

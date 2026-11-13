@@ -94,6 +94,27 @@ broken pack falls back to built-in defaults with a warning rather than failing t
 
 **Reopens if** loading a pack ever becomes a startup liability.
 
+## A6 · The packaged default carries no domain quantities
+
+**Decided** 2026-11-13, after the first version shipped one project's measurement names as the
+default.
+
+**Rests on**
+- `[判断]` A general tool that starts with somebody's `div_ratio` is a specialised tool wearing
+  a general name. Whoever installs it would inherit conclusions they did not measure.
+- `[论文·窗口外]` More Skills, Worse Agents?: inheriting an unreadive library is how a system
+  gets worse while appearing more capable.
+
+**Enforced** `packs/generic.json` has empty registries and the full rule set; the filled-in
+study lives in `packs/examples/`. A test asserts the default is domain-free and that citing an
+unregistered quantity is refused.
+
+**Costs** First run is noisier: every quantity a new project cites must be registered before it
+can be used. That is the correct order.
+
+**Reopens if** the mechanism turns out to need a starter vocabulary - then it is a small,
+deliberately generic one, not a study's.
+
 ---
 
 ## Withdrawn
