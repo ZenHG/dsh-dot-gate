@@ -4,20 +4,45 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Now
 
-- [ ] **Fix mention detection, which is where the false positives are** - the first precision
-      measurement (see Done) put wiki lines at 61.5% and session messages at 44.8%. Removing the weak
-      words does not help: the wiki number moves from 61.5% to 60.9%. What the false positives have in
-      common is that they *mention* the phrase rather than assert with it - balanced quotations, table
-      headers, rules being described, reports of what someone else said. `isQuoted` currently looks
-      only at the character immediately before or after the match, so a quoted sentence still fires.
-      Criterion: re-run the same 84-row corpus after the change and show the number move, with the old
-      and new interval side by side.
+- [ ] **Grow n before deciding the release, not change the detector** - on the population the gate
+      actually evaluates (writes under `Wiki/`), the replayed precision is **77.8% [54.8, 91.0] with
+      recall 87.5%**, at the 70% bar. The interval is wide because that population is only 18 rows.
+      Every structural attempt to raise precision made recall worse (see Done), so the next honest move
+      is more rows, not a cleverer matcher. Criterion: 60+ real `Wiki/` hits labelled, the interval
+      narrowed, and the release decision restated against the new interval rather than the point.
 
 - [ ] **Get a second human rater for kappa** - the 84 labels came from one blind rater. Precision has
       an interval; agreement does not exist yet. Criterion: two raters over the same sheet, Cohen's
       kappa printed with its n.
 
 ## Done
+
+- [x] **Mention detection was tried, measured four ways, and reverted** - the hypothesis was that the
+      false positives are structural mentions (code spans, fenced blocks, balanced quotations) and that
+      fixing `isQuoted` would move the number. It did, in the wrong direction. Replaying the same 84
+      full texts through the real plugin:
+
+      | variant | fires | precision | recall |
+      |---|---:|---|---|
+      | original adjacency rule | 67 | 55.2% [43.4, 66.5] | 88.1% |
+      | fenced blocks + inline code | 78 | 51.3% [40.4, 62.1] | 95.2% |
+      | + balanced quotations | 49 | 63.3% [49.3, 75.3] | 73.8% |
+      | + quotations, scan window 300 | 63 | 54.0% [41.8, 65.7] | 81.0% |
+      | fenced blocks + original rule | 79 | 51.9% [41.1, 62.6] | 97.6% |
+
+      Only the aggressive variant gained precision, and it paid 14 points of recall to do it while
+      still missing the 70% bar. Two things this exposed: the original rule's apparent precision came
+      largely from a bug (odd-count backtick parity) that accidentally suppressed code-heavy messages,
+      and the real false positives are **semantic** - `如果 ② 做不到完整`, `才说做不到`,
+      `没有它哪件事做不到` are conditionals, meta-rules and questions, which no regex separates from a
+      claim. Reverted; the file is byte-identical to before the experiment.
+
+- [x] **The previous precision number was measuring the wrong population** - 50.0% (and 61.5% for wiki
+      lines) counted every row in the corpus. But the gate only ever evaluates writes under `Wiki/`;
+      session messages are rows it never sees. Restricted to the rows it actually fires on, replayed
+      end to end: all rows 55.2% [43.4, 66.5]; **wiki rows 77.8% [54.8, 91.0], recall 87.5%, n=18**;
+      session rows 46.9% [33.7, 60.6]. The lower numbers were real but answered a question nobody
+      asked. Corrected here rather than quietly dropped.
 
 - [x] **The history was enough: a first precision number, out of data already on disk** - 240 stored
       sessions, 17,512 messages and 15,521 tool calls were already there, so the corpus never had to
