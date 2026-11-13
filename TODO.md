@@ -17,6 +17,41 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Done
 
+- [x] **Adherence to the evidence checklist, measured against a control** - the papers this project
+      cites measure *adherence to a prescribed procedure*, not trigger precision, so this is the
+      experiment that actually answers "does it work for the reason SIGIL says it works". Two groups
+      of knowledge-base sentences, scored blind on the five things the reminder asks for (sources,
+      counter-example search, named metric, live-variable statement, reproduction) by a rater who
+      never saw the grouping:
+
+      | group | n | mean items /5 | >=3 items | all 5 |
+      |---|---:|---|---|---|
+      | contains a trigger word | 27 | 1.70 | 40.7% [24.5, 59.3] | 0/27 |
+      | makes the same kind of limitation, no trigger word | 32 | 1.69 | 28.1% [15.6, 45.4] | 2/32 |
+
+      Difference in mean items **+0.02, 95% bootstrap [-0.82, +0.84]**. The two groups cannot be told
+      apart. Overall only 2 of 59 passages carry all five, and `counter` appears in just 4.
+
+      **What this does and does not say.** The knowledge base is almost entirely older than the gate -
+      it was installed on 2026-11-13 - so this is a *level*, not an effect; it cannot show that the
+      gate fails to raise adherence, only that nothing here has been raised yet. What it does show is
+      sharper than the earlier precision work: the trigger words do **not** select for unusually
+      under-evidenced claims (40.7% vs 28.1%, intervals overlapping), so the word list is not
+      identifying a distinct failure population - which is the assumption the whole mechanism rests on.
+
+- [x] **The mechanism matches the papers' shape, and none of their evidence** - checked against the
+      five abstracts rather than against what was remembered about them. SIGIL and SkillCompiler both
+      describe a typed intermediate form that is validated, then executed deterministically, with the
+      interpretive part left to the model; the pack and its closed vocabulary implement exactly that
+      shape. But SIGIL *compiles* a harness from the representation while this project *interprets*
+      the pack with fixed code, so the representation is far thinner - adding a ninth atom is a code
+      change. Harness Engineering is cited for the right warning (its deterministic layer helped in
+      one of four cells and hurt in two) but its measurement was never replicated here. The
+      More Skills citation supports a closed vocabulary only by analogy: a 202-skill library the agent
+      chooses from is not the same object as an eight-predicate rule language. And Regression Tax -
+      whether adding the gate makes some tasks *worse* - has not been attempted at all. Conclusion:
+      shape conforms, evidence does not.
+
 - [x] **Mention detection was tried, measured four ways, and reverted** - the hypothesis was that the
       false positives are structural mentions (code spans, fenced blocks, balanced quotations) and that
       fixing `isQuoted` would move the number. It did, in the wrong direction. Replaying the same 84
