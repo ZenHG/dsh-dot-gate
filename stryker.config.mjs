@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+import { readFileSync } from 'node:fs'
 /**
  * stryker.config.mjs - mutation testing for the judgement-pack interpreter.
  *
@@ -11,10 +12,15 @@
  * decide whether a verdict passes, verdict.mjs delegates, and index.js turns a hit
  * into a reminder. Those four are the surface a defect would have to cross.
  */
+// The command is read from package.json rather than repeated here: a hard-coded list once
+// left the property suite out, so every mutant was scored against two thirds of the tests.
+// Anything npm test runs is what a mutant has to survive.
+const { scripts } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+
 export default {
   testRunner: 'command',
   commandRunner: {
-    command: 'node --test test.mjs test-verdict.mjs test-pack.mjs',
+    command: scripts.test,
   },
   mutate: ['src/evaluate.mjs', 'src/pack.mjs', 'src/verdict.mjs', 'index.js'],
   coverageAnalysis: 'off',
