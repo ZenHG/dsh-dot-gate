@@ -101,6 +101,10 @@ leaves the process.
 - It has no opinion about your gate. Point `words` at whatever your project
   treats as a conclusion.
 
+## Process
+
+One page from "is this worth doing" to "released": [PROCESS.md](./PROCESS.md).
+
 ## License
 
 MIT

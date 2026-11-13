@@ -1,5 +1,7 @@
 # Contributing
 
+Start with [PROCESS.md](./PROCESS.md) — it is the whole path, not just this page.
+
 ## Adding a rule
 
 1. **Write the failure first.** Add a sample under `test.mjs` that reproduces the
