@@ -22,6 +22,7 @@
 import { appendFileSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadPack } from './src/pack.mjs'
 
 // The skill travels with the package; the provider reads it from disk so an edited
 // SKILL.md is visible without rebuilding anything.
@@ -73,6 +74,9 @@ export const name = 'dot-gate'
 export const inject = ['skills']
 
 const DEFAULTS = {
+  // Empty means "the pack that ships with this package". Point it elsewhere to run a
+  // different judgement pack without touching code.
+  packPath: '',
   // Off by default: a gate that can block someone's write on its first day gets
   // uninstalled. Turn it on once the false-positive rate is known.
   hardMode: false,
@@ -109,9 +113,15 @@ function normalizePath(p) {
  * where a list belongs) otherwise throws deep inside `apply` and the plugin simply
  * fails to load with nothing useful said about why.
  */
-function resolveOptions(config) {
+function resolveOptions(config, pack) {
   const given = config === undefined || config === null ? {} : config
-  const opts = { ...DEFAULTS, ...given }
+  // The pack owns the words and paths; config still wins when someone overrides them.
+  const base = { ...DEFAULTS }
+  if (pack !== null && pack !== undefined) {
+    base.words = pack.words
+    base.paths = pack.paths
+  }
+  const opts = { ...base, ...given }
   const bad = (key, want) => {
     throw new TypeError('dot-gate: config.' + key + ' must be ' + want + ' (got ' + JSON.stringify(given[key]) + ')')
   }
@@ -122,6 +132,7 @@ function resolveOptions(config) {
   if (!Number.isInteger(opts.maxPerTurn) || opts.maxPerTurn < 0) bad('maxPerTurn', 'a non-negative integer')
   if (typeof opts.hardMode !== 'boolean') bad('hardMode', 'a boolean')
   if (typeof opts.auditPath !== 'string') bad('auditPath', 'a string path, or an empty string to disable')
+  if (typeof opts.packPath !== 'string') bad('packPath', 'a string path, or an empty string for the shipped pack')
   if (typeof opts.steerAtTurnEnd !== 'boolean') bad('steerAtTurnEnd', 'a boolean')
   return opts
 }
@@ -173,7 +184,15 @@ function makeAudit(opts) {
 }
 
 export function apply(ctx, config) {
-  const opts = resolveOptions(config)
+  let pack = null
+  try {
+    pack = loadPack(config === undefined || config === null ? '' : config.packPath).pack
+  } catch (error) {
+    // A broken or missing pack must not take the gate down: fall back to the built-in
+    // words and say so once, rather than loading silently with half the criteria.
+    ctx.logger?.warn?.('dot-gate: pack unavailable, falling back to built-in defaults: ' + String(error && error.message ? error.message : error))
+  }
+  const opts = resolveOptions(config, pack)
   const audit = makeAudit(opts)
   const states = new Map()
   const pattern = new RegExp(opts.words.map(escapeRe).join('|'))

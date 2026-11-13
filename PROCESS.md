@@ -1,5 +1,7 @@
 # Process
 
+Numbered decisions, with their evidence and reopen conditions: [DECISIONS.md](./DECISIONS.md).
+
 One page, one path. Every change to this package follows it, including changes made by an
 agent. The point is not ceremony: each step exists because skipping it produced a mistake
 that survived review.

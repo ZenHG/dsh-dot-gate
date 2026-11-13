@@ -2,7 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { apply, name } from './index.js'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -239,4 +239,31 @@ test('does not steer when nothing was hit', () => {
   h.emit(s, turnStart)
   h.handlers.get('agent/turn-stopping')({ agent: { session: s, steer: (m) => steers.push(m) }, turn: 1 })
   assert.equal(steers.length, 0)
+})
+
+test('reads its words from the pack, not from a hard-coded copy', async () => {
+  const scratch = mkdtempSync(join(tmpdir(), 'dotgate-pack-'))
+  const base = JSON.parse(readFileSync(join(process.cwd(), 'packs', 'evidence-for-capability-claims.json'), 'utf8'))
+  base.words = ['banana']
+  const packPath = join(scratch, 'p.json')
+  writeFileSync(packPath, JSON.stringify(base), 'utf8')
+
+  const h = harness({ packPath })
+  const s = { id: 'p1' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  assert.equal((await h.step(s)).messages.length, 0, 'the built-in word must no longer fire')
+
+  h.emit(s, wikiWrite('the banana is unripe.'))
+  assert.equal((await h.step(s)).messages.length, 1, 'the pack word must fire')
+
+  rmSync(scratch, { recursive: true, force: true })
+})
+
+test('a broken pack falls back instead of taking the gate down', async () => {
+  const h = harness({ packPath: 'definitely/not/here.json' })
+  const s = { id: 'p2' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  assert.equal((await h.step(s)).messages.length, 1, 'built-in defaults still work')
 })

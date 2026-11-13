@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { checkVerdict, DEFAULT_METRICS, DEFAULT_LIVE_VARS } from './src/verdict.mjs'
+import { checkVerdict } from './src/verdict.mjs'
+import { loadPack } from './src/pack.mjs'
 
 const base = (over) => ({
   claim: 'x',
@@ -64,7 +65,8 @@ test('R6: two runs only warns', () => {
   assert.equal(r.warns.length, 1)
 })
 
-test('the default registries are non-empty', () => {
-  assert.ok(Object.keys(DEFAULT_METRICS).length >= 5)
-  assert.ok(Object.keys(DEFAULT_LIVE_VARS).length >= 5)
+test('the shipped pack carries both registries', () => {
+  const { pack } = loadPack()
+  assert.ok(Object.keys(pack.metrics).length >= 5)
+  assert.ok(Object.keys(pack.liveVars).length >= 5)
 })

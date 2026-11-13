@@ -2,21 +2,19 @@
 /**
  * pack.mjs - one judgement pack, read by both implementations.
  *
- * The registry used to exist twice: inline constants in `verdict.mjs` and two JSON files
- * next to the Python gate. Nothing compared them, and the cross-check compares verdicts on
- * a handful of samples, so a name added on one side only could still pass everything.
- * A single file with an explicit schema removes that class of drift.
+ * The registry used to exist twice, with nothing comparing them. A single file with an
+ * explicit schema removes that class of drift.
  *
- * The pack carries data, never logic: `rules` only selects which rules run. The moment a
- * pack starts describing how a rule works, it has become a rule engine - which is a
- * different, much larger decision (see .out-of-scope/vendor-state-machines.md).
+ * The pack carries composition, not logic: `rules` composes atoms from a closed vocabulary.
+ * Naming an atom the interpreter does not know is a load-time error, never a silent no-op.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ATOMS, OVER_PATHS } from './evaluate.mjs'
 
-export const PACK_SCHEMA_VERSION = 1
-const KNOWN_RULES = new Set(['R1', 'R2', 'R3', 'R4', 'R5', 'R6'])
+export const PACK_SCHEMA_VERSION = 2
+const WHEN = new Set(['always', 'negative', 'non-negative'])
 const KNOWN_STATUSES = new Set([
   'active',
   'active_with_caveat',
@@ -35,6 +33,22 @@ function fail(key, want, got) {
   throw new TypeError('dot-gate pack: ' + key + ' must be ' + want + ' (got ' + JSON.stringify(got) + ')')
 }
 
+function validateSection(name, section) {
+  if (section === undefined || section === null) return
+  if (typeof section !== 'object') fail(name, 'an object of rules', section)
+  for (const [ruleId, rule] of Object.entries(section)) {
+    if (rule === null || typeof rule !== 'object') fail(name + '.' + ruleId, 'an object', rule)
+    if (rule.when !== undefined && !WHEN.has(rule.when)) fail(name + '.' + ruleId + '.when', 'one of ' + [...WHEN].join('/'), rule.when)
+    if (!Array.isArray(rule.checks) || rule.checks.length === 0) fail(name + '.' + ruleId + '.checks', 'a non-empty array', rule.checks)
+    for (const [i, check] of rule.checks.entries()) {
+      const at = name + '.' + ruleId + '.checks.' + i
+      if (check === null || typeof check !== 'object') fail(at, 'an object', check)
+      if (!ATOMS.has(check.atom)) fail(at + '.atom', 'one of ' + [...ATOMS].join('/'), check.atom)
+      if (check.over !== undefined && !OVER_PATHS.has(check.over)) fail(at + '.over', 'one of ' + [...OVER_PATHS].join('/'), check.over)
+    }
+  }
+}
+
 /** Throw with the offending key rather than failing somewhere deep in a rule. */
 export function validatePack(pack) {
   if (pack === undefined || pack === null || typeof pack !== 'object') fail('pack', 'an object', pack)
@@ -45,7 +59,9 @@ export function validatePack(pack) {
   if (pack.thresholds === undefined || pack.thresholds === null || typeof pack.thresholds !== 'object') fail('thresholds', 'an object', pack.thresholds)
   if (!Number.isInteger(pack.thresholds.minSources) || pack.thresholds.minSources < 1) fail('thresholds.minSources', 'a positive integer', pack.thresholds.minSources)
   if (!Number.isInteger(pack.thresholds.minRuns) || pack.thresholds.minRuns < 1) fail('thresholds.minRuns', 'a positive integer', pack.thresholds.minRuns)
-  if (!Array.isArray(pack.rules) || pack.rules.some((r) => !KNOWN_RULES.has(r))) fail('rules', 'an array drawn from ' + [...KNOWN_RULES].join('/'), pack.rules)
+  validateSection('rules', pack.rules)
+  validateSection('warnings', pack.warnings)
+  if (pack.rules === undefined) fail('rules', 'an object of rules', pack.rules)
   for (const key of ['metrics', 'liveVars']) {
     const table = pack[key]
     if (table === undefined || table === null || typeof table !== 'object') fail(key, 'an object', table)
@@ -59,6 +75,5 @@ export function validatePack(pack) {
 
 export function loadPack(path) {
   const target = path === undefined || path === null || path === '' ? defaultPackPath() : path
-  const raw = readFileSync(target, 'utf8')
-  return { pack: validatePack(JSON.parse(raw)), path: target }
+  return { pack: validatePack(JSON.parse(readFileSync(target, 'utf8'))), path: target }
 }
