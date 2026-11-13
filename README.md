@@ -89,7 +89,7 @@ experience, not a bug.
 an unknown atom is refused at load, with the key. A rule that referenced another rule's
 outcome would be a state machine, so that is refused too.
 
-## The skill it ships## The skill it ships
+## The skill it ships
 
 The package also contributes a skill named `dot`, through the official skill
 registry rather than through a profile path:

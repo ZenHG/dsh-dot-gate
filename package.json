@@ -37,6 +37,7 @@
     "packs/",
     "src/pack.mjs",
     "test-pack.mjs",
+    "test-survivors.mjs",
     "src/evaluate.mjs"
   ],
   "os": [
@@ -62,6 +63,9 @@
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
+  },
+  "repoOnlyTests": {
+    "test-property.mjs": "imports fast-check, which is a devDependency and is not installed for a consumer"
   },
   "publishConfig": {
     "access": "public"

@@ -16,7 +16,7 @@
  * Exit codes: 0 self-sufficient, 1 failed, 2 could not run.
  */
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, existsSync, rmSync } from 'node:fs'
+import { mkdtempSync, existsSync, readFileSync, rmSync } from 'node:fs'
 import { join, dirname, sep } from 'node:path'
 import { tmpdir } from 'node:os'
 import { fileURLToPath } from 'node:url'
@@ -69,9 +69,35 @@ try {
       if (probe.status === 0) say('  [OK]   import from the installed copy')
       else { say('  [FAIL] import from the installed copy'); say(((probe.stderr || '') + (probe.stdout || '')).trim().slice(0, 300)); code = 1 }
 
-      const tests = direct(process.execPath, ['--test', 'test.mjs', 'test-verdict.mjs'], target)
-      if (tests.status === 0) say('  [OK]   packaged tests pass outside the source tree')
-      else { say('  [FAIL] packaged tests'); say(((tests.stdout || '') + (tests.stderr || '')).split('\n').slice(-8).join('\n')); code = 1 }
+      // Run the suite the package itself declares, not a hand-picked pair. A test file added to
+      // scripts.test but left out of files[] keeps passing here while silently not shipping - the
+      // gate was doing exactly that for test-property.mjs and test-survivors.mjs.
+      // Run the files scripts.test names AND the tarball carries. Every declared file must be one
+      // of the two: shipped and runnable, or declared repo-only with a reason. A file added to
+      // scripts.test and dropped on the floor now fails here instead of passing silently - which
+      // is what happened to test-property.mjs and test-survivors.mjs before this check existed.
+      const shipped = JSON.parse(readFileSync(join(target, 'package.json'), 'utf8'))
+      const declared = (shipped.scripts?.test ?? '').replace(/^node\s+--test\s+/, '').trim().split(/\s+/).filter(Boolean)
+      const repoOnly = shipped.repoOnlyTests ?? {}
+      const runnable = []
+      let coverage = code
+      for (const file of declared) {
+        if (existsSync(join(target, file))) runnable.push(file)
+        else if (repoOnly[file]) say('  [..]   ' + file + ' - repo-only: ' + repoOnly[file])
+        else { say('  [FAIL] ' + file + ' is in scripts.test but neither shipped nor declared in repoOnlyTests'); coverage = 1 }
+      }
+      for (const file of Object.keys(repoOnly)) {
+        if (!declared.includes(file)) { say('  [FAIL] ' + file + ' is declared repo-only but scripts.test does not run it'); coverage = 1 }
+      }
+      if (code === 0) code = coverage
+      if (runnable.length === 0) {
+        say('  [FAIL] no declared test file was shipped')
+        code = 1
+      } else if (code === 0) {
+        const tests = direct(process.execPath, ['--test', ...runnable], target)
+        if (tests.status === 0) say('  [OK]   the shipped suite (' + runnable.length + ' file(s)) passes outside the source tree')
+        else { say('  [FAIL] packaged tests'); say(((tests.stdout || '') + (tests.stderr || '')).split('\n').slice(-8).join('\n')); code = 1 }
+      }
 
       const index = join(target, 'index.js')
       if (existsSync(index) && target.startsWith(tmp + sep)) say('  [OK]   resolves inside the throwaway directory')
