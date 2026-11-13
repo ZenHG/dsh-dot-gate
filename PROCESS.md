@@ -49,8 +49,13 @@ a test flake.
 
 - **Accepted**: an entry under `Unreleased` in [CHANGELOG.md](./CHANGELOG.md).
 - **Rejected**: a file in [`.out-of-scope/`](./.out-of-scope/) saying what was rejected and
-  what would reopen it. Rejections are decisions too, and an unrecorded decision gets
-  re-proposed every few weeks.
+  what would reopen it.
+
+  But only when it was a **considered direction**. The bar is: *could someone plausibly
+  propose this again?* "We evaluated a rule engine and the rules never became complex
+  enough to earn one" clears it. "We built a component before anything needed it, then
+  deleted it" does not - that is a mistake, not a rejected direction, and writing it up
+  dresses the mistake as a judgement call. The next reader would take it as deliberate.
 
 ## 5 · Release
 
