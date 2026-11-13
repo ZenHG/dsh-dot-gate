@@ -15,20 +15,27 @@ Evidence is labelled so nobody has to guess how much weight it carries:
 
 ---
 
-## A1 · Judgement lives in a pack, and both implementations read the same one
+## A1 · Judgement lives in a pack, which is the only place the rules live
 
 **Decided** 2026-11-13. Supersedes an earlier inline-constant design in which the registry
 existed twice with nothing comparing them.
 
 **Rests on**
 - `[论文·窗口外]` SIGIL (arXiv:2607.27309): rules expressed in a validated intermediate form
-  raise adherence from 26.2–54% to up to 100%, with 21–45% fewer tokens.
-- `[论文·窗口内]` Harness Engineering (arXiv:2608.26197): a deterministic execution layer made
-  2 of 4 model–task combinations **worse**. Determinism is not automatically an improvement.
+  raise adherence from 26.2–54% to up to 100% in their four-model, eleven-skill setup, and cut
+  runtime tokens by 21–45% **for three of the four models**. Both conditions matter; quoting the
+  range without them overstates it.
+- `[论文·窗口内]` Harness Engineering (arXiv:2608.26197): a deterministic execution layer
+  **degraded reproducibility** in 2 of 4 model–task cells. The metric is reproducibility, not task
+  success, and their later Structured Planning removes the effect. Determinism is not automatically
+  an improvement.
 - `[判断]` Two copies of one registry with no comparator is a defect regardless of papers.
 
-**Costs** A pack must be kept valid as the engine grows; `npm run crosscheck` must pass with
-the pack hash printed, or "the implementations agree" means nothing.
+**Costs** A pack must be kept valid as the engine grows. There is only one implementation in this
+repository - the JavaScript gate. A second one lives outside this repository, on the author's machine, and is
+reached through `VERDICT_GATE_PY`; without it
+`npm run crosscheck` prints "skipped (not passed)" and exits 2, and CI does not run it. So "the
+implementations agree" is a local check that has been performed, not a property this repo enforces.
 
 **Reopens if** a second consumer needs judgement without being able to read the pack file.
 
@@ -43,8 +50,8 @@ the pack hash printed, or "the implementations agree" means nothing.
 - `[判断]` A pack that could invent atoms would be a programming language, and we would be
   maintaining a compiler nobody asked for.
 
-**Enforced** `validatePack` throws naming the offending key; the Python gate prints the same
-and exits 2. A rule may not reference another rule's outcome - that is a state machine, and
+**Enforced** `validatePack` throws naming the offending key; the machine-local Python gate prints
+the same and exits 2. A rule may not reference another rule's outcome - that is a state machine, and
 the test `a rule cannot read another rule's outcome` holds the line.
 
 **Costs** A genuinely new kind of check needs a code change and must clear the four bars in

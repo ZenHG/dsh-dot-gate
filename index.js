@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: MIT
 /**
- * dsh-dot-gate - make an agent check its own verdict gate before it writes a
- * negative capability conclusion.
+ * dsh-dot-gate - remind an agent to check its own verdict gate before it treats a
+ * negative capability conclusion as settled. By default the write lands first and the
+ * reminder follows; hardMode refuses the write before it lands.
  *
  * Why this exists: a reminder driven by a tool-call counter fires when the agent
  * is *busy*. The failure this targets is different - the agent is *fast to
  * conclude*: it reads one source, declares a capability impossible, and writes
- * that into a knowledge base. Tool-call counts do not correlate with that, so the
- * trigger here is the action itself: a write or edit that lands a negative claim
- * inside a configured path.
+ * that into a knowledge base. Nothing here measures a correlation between tool-call
+ * counts and that failure; the design argument is that a counter does not line up with
+ * it while the action does. So the trigger is the action itself: a write or edit that
+ * lands a negative claim inside a configured path.
  *
  * One fact decides everything: a turn has produced an uninspected negative claim
  * and has not yet been reminded about it. There is no timer, no polling and no
- * counter - with no matching tool call the plugin costs nothing.
+ * counter. A tool call that matches nothing costs one string match and nothing else; the
+ * handlers do run on every event, so "costs nothing" would be an overstatement.
  *
  * The plugin does not judge the claim. It cannot: whether three sources are
  * enough is a policy question, not a code question. It only refuses to let the
@@ -157,8 +160,13 @@ function isQuoted(body, index, length) {
   return (prev !== '' && openers.includes(prev)) || (next !== '' && closers.includes(next))
 }
 
+/** The path a call targets, normalised; '' when the call names none. */
+function callPath(args) {
+  return normalizePath(args.file_path === undefined ? (args.path === undefined ? args.file : args.path) : args.file_path)
+}
+
 function matchCall(args, opts, pattern, prefixes) {
-  const path = normalizePath(args.file_path === undefined ? (args.path === undefined ? args.file : args.path) : args.file_path)
+  const path = callPath(args)
   if (path === '') return null
   if (!prefixes.some((pre) => path.includes(pre))) return null
   const body = args.content === undefined ? (args.new_string === undefined ? '' : args.new_string) : args.content
@@ -248,7 +256,7 @@ export function apply(ctx, config) {
   const stateOf = (id) => {
     let s = states.get(id)
     if (s === undefined) {
-      s = { nudged: 0, steered: 0, hit: null }
+      s = { nudged: 0, steered: 0, hit: null, reminded: null }
       states.set(id, s)
     }
     return s
@@ -263,6 +271,7 @@ export function apply(ctx, config) {
       s.nudged = 0
       s.steered = 0
       s.hit = null
+      s.reminded = null
       return
     }
     if (type !== 'tool/call' && type !== 'tool/ptc-dispatch-start') return
@@ -273,7 +282,12 @@ export function apply(ctx, config) {
 
     const args = d.arguments === undefined || d.arguments === null ? {} : d.arguments
     const hit = matchCall(args, opts, pattern, prefixes)
-    if (hit === null) return
+    if (hit === null) {
+      // Rewriting the same file without the word is how a claim gets fixed. Without
+      // this, the close boundary would object to a claim that has already been repaired.
+      if (s.reminded !== null && callPath(args) === s.reminded.path) s.reminded = null
+      return
+    }
     s.hit = { word: hit.word, path: hit.path, tool, snippet: hit.snippet }
     audit({ event: 'remind', mode: 'soft', tool, path: hit.path, word: hit.word, snippet: hit.snippet })
   })
@@ -302,13 +316,21 @@ export function apply(ctx, config) {
   // boundary: objecting there steers the agent, and the machine re-reads its inbox and
   // runs another step. One objection per turn, or a model that never satisfies the gate
   // would never end the turn.
+  //
+  // It objects only to a hit that was reminded about and then never rewritten cleanly. A
+  // monitored write to the same path without the word clears it - that is what fixing the
+  // claim looks like from here.
   if (opts.steerAtTurnEnd) {
     ctx.on('agent/turn-stopping', (payload) => {
       const session = payload === undefined || payload === null || payload.agent === undefined ? undefined : payload.agent.session
       if (session === undefined || session === null || typeof session.id !== 'string') return
       const s = stateOf(session.id)
-      if (s.hit === null || s.steered >= 1) return
-      const hit = s.hit
+      // Two shapes reach the close boundary: a hit that was reminded about and never rewritten
+      // cleanly (`reminded`), and a hit that never got a reminder at all because the turn ended
+      // first (`hit`). Both are unaddressed, so both are worth one objection.
+      const hit = s.reminded !== null ? s.reminded : s.hit
+      if (hit === null || s.steered >= 1) return
+      s.reminded = null
       s.hit = null
       s.steered = 1
       audit({ event: 'steer', mode: 'soft', tool: hit.tool, path: hit.path, word: hit.word, snippet: hit.snippet === undefined ? '' : hit.snippet })
@@ -332,6 +354,10 @@ export function apply(ctx, config) {
 
     const hit = s.hit
     s.hit = null
+    // The hit survives for the close boundary under a different name. Clearing it here is
+    // why the steering path could never fire: turn-stopping looked at `hit`, which was
+    // always null by the time it ran.
+    s.reminded = hit
     s.nudged += 1
     const message = {
       role: 'user',

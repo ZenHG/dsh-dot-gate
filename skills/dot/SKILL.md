@@ -28,7 +28,8 @@ a claim about ability, and dressing it up as one is the failure this skill targe
 ## The loop
 
 1. **Collect before concluding.**
-   - At least three independent sources, each with a URL and a date.
+   - At least three distinct source URLs. The gate counts distinct URLs only:
+     independence and recency are your judgement, not something it can check.
    - For a negative claim, record the counter-example search: query the same model's
      own documentation and its field reports before generalising. One community post
      is not a survey.
@@ -38,8 +39,10 @@ a claim about ability, and dressing it up as one is the failure this skill targe
 3. **Check that the contrasted variable is live.** Two arms that differ only on a
    parameter the model ignores were never contrasted, however clean the wording.
 4. **Write down the re-run.** A command plus an observed value, or it did not happen.
-5. **Run the gate.** Exit 0 lands. Exit 1 is the gate pointing at the missing part.
-   Exit 2 means it could not run - that is not a pass.
+5. **Gate the conclusion.** Use whatever the project already keeps. `checkVerdict` in
+   this package returns `{ pass, fails, warns }`; a project with its own CLI gate may
+   express the same thing as exit 0 / 1 / 2. Exit 2 means it could not run - that is
+   not a pass.
 
 ## Shape of a verdict
 

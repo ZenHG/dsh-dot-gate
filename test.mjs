@@ -325,3 +325,40 @@ test('a broken pack falls back instead of taking the gate down', async () => {
   h.emit(s, wikiWrite('这个模型做不到。'))
   assert.equal((await h.step(s)).messages.length, 1, 'built-in defaults still work')
 })
+
+
+
+test('steers at the close boundary after the mid-turn reminder was walked past', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dotgate-steer-flow-'))
+  const file = join(dir, 'a.jsonl')
+  const h = harness({ auditPath: file, steerAtTurnEnd: true })
+  const s = { id: 'a9' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  const d = await h.step(s)
+  assert.equal(d.messages.length, 1, 'the mid-turn reminder did not fire')
+  // The reminder consumed the hit. Before this test, that also meant the close boundary had
+  // nothing left to object to, which is why steerAtTurnEnd could never fire in the default
+  // configuration and no test noticed.
+  const steers = []
+  h.handlers.get('agent/turn-stopping')({ agent: { session: s, steer: (m) => steers.push(m) }, turn: 1 })
+  assert.equal(steers.length, 1, 'a reminded hit that was never rewritten must still be objected to')
+  const entries = readFileSync(file, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+  assert.deepEqual(entries.map((e) => e.event), ['remind', 'steer'])
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('a clean rewrite before the close boundary cancels the objection', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dotgate-steer-fixed-'))
+  const file = join(dir, 'a.jsonl')
+  const h = harness({ auditPath: file, steerAtTurnEnd: true })
+  const s = { id: 'a10' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  await h.step(s)
+  h.emit(s, wikiWrite('实测 3 次结果一致，来源与观测值已记录。'))
+  const steers = []
+  h.handlers.get('agent/turn-stopping')({ agent: { session: s, steer: (m) => steers.push(m) }, turn: 1 })
+  assert.equal(steers.length, 0, 'the claim was rewritten without the word, so there is nothing to object to')
+  rmSync(dir, { recursive: true, force: true })
+})

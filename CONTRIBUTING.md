@@ -22,8 +22,9 @@ in `cordis.patch.yml`, which is what configuration is for.
 
 - Plain ES modules, no build step, no dependencies.
 - Every `.js` / `.mjs` starts with `// SPDX-License-Identifier: MIT`.
-- No timers, no polling, no I/O. A plugin that costs nothing when idle is a
-  plugin people leave installed.
+- No timers, no polling. I/O is limited to reading the pack and the skill, plus the
+  opt-in audit append. A plugin that costs nothing when idle is a plugin people leave
+  installed.
 
 ## Rules of evidence
 

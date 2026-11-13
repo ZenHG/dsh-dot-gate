@@ -30,10 +30,13 @@ Read them before proposing something.
 - **It does not judge your claims.** Whether a claim is well-evidenced is a
   policy question about your project. The plugin only refuses to let it pass
   silently.
-- **It does not block.** No exit codes, no reverts, no rejected calls. A gate
-  that can break someone's workflow gets uninstalled in a week.
-- **No network, no files, no persistence.** It reads tool arguments in memory
-  and nothing else.
+- **It blocks only when asked to.** By default there are no exit codes, no reverts
+  and no rejected calls; `hardMode: true` adds one deny at `tools/pre-execute`, and
+  that is the only blocking path. The expectation that a gate which blocks on day one
+  gets uninstalled is a judgement about users, not a measurement.
+- **No network, and no writes you did not ask for.** It reads its pack and `SKILL.md`
+  from disk at load, and appends to one JSONL audit file when `auditPath` is set. With
+  `auditPath` empty it writes nothing.
 - **No model-specific tuning.** Phrases are configuration, not code.
 - **No client UI.** DSH's client half has no React runtime; a badge is not worth a build chain.
 - **No prebuilt native / multi-platform binary distribution path.** Every consumer of a DSH

@@ -1,7 +1,8 @@
 # dsh-dot-gate
 
-Make an agent check its own verdict gate **before** it writes a negative
-capability conclusion into a knowledge base.
+Remind an agent to check its own verdict gate before it treats a negative
+capability conclusion as settled. By default the write lands and the reminder
+follows it; `hardMode: true` refuses the write before it lands.
 
 ## The problem
 
@@ -11,19 +12,22 @@ The usual reminder plugins fire on a **tool-call counter** - they nudge when the
 agent is busy. But the failure is not busyness, it is speed of judgement: one
 source is read, a capability is declared impossible, and the claim is committed.
 
-A counter-based nudge does not correlate with that failure. The action does.
+A counter-based nudge need not line up with that failure, while the action does by
+construction. That is the design argument, not a measured correlation - no such
+measurement exists in this repository.
 
 ## What it does
 
 It watches `tool/call` / `tool/ptc-dispatch-start` for `write` and `edit`
-calls whose target path is under a watched prefix and whose body contains a
+calls whose target path contains a watched prefix and whose body contains a
 configured phrase. On the next step it injects **one** reminder asking the agent
 to run the project's own gate and to state sources, counter-examples, the metric
 used, whether the contrasted variable is known to be effective, and a
 re-runnable command.
 
-It does not judge the claim and it never blocks. Whether three sources are enough
-is a policy question; this plugin only refuses to let the claim pass silently.
+It does not judge the claim. Whether three sources are enough is a policy question;
+this plugin only refuses to let the claim pass silently. It blocks nothing by
+default - `hardMode: true` is what denies a write.
 
 ## Two modes
 
@@ -32,8 +36,9 @@ is a policy question; this plugin only refuses to let the claim pass silently.
 | `hardMode: false` (default) | the write lands, then one reminder is injected | the file is already on disk, so the reminder asks for a correction |
 | `hardMode: true` | the write is **refused** by a `tools/pre-execute` guard, with a model-facing reason | the only place a write can actually be stopped |
 
-The guard is opt-in on purpose. A gate that blocks a write on its first day gets
-uninstalled; the reminder mode is how you measure the false-positive rate first.
+The guard is opt-in on purpose. The reasoning is that a gate which blocks on its
+first day tends to get uninstalled - an expectation about users, not something this
+project has measured. The reminder mode is the cheaper order to find that out in.
 
 ## Install
 
@@ -60,9 +65,9 @@ reloads; Node code does not.
 
 | key | default | meaning |
 |---|---|---|
-| `maxPerTurn` | `1` | reminders per turn; `0` disables injection |
-| `steerAtTurnEnd` | `false` | if a hit was never addressed, object once at the close boundary; the turn then runs another step |
-| `auditPath` | `''` | JSONL path for one line per hit; empty means the plugin writes no file at all |
+| `maxPerTurn` | `1` | reminders per turn; `0` disables the mid-turn reminder (the close-boundary objection is a separate path) |
+| `steerAtTurnEnd` | `false` | object once at the close boundary when a reminded hit was never rewritten without the word; the turn then runs another step. Not yet observed in a live turn |
+| `auditPath` | `''` | JSONL path for one line per hit; empty means no audit file is written (the plugin still reads its pack and skill from disk) |
 | `paths` | `["Wiki/"]` | a write is inspected only if its path contains one of these |
 | `tools` | `["write","edit"]` | tool names to inspect |
 | `words` | see above | any match marks the write as a capability claim |
@@ -110,9 +115,11 @@ which is the seam the bundled skills use.
 
 ## Privacy
 
-The plugin reads tool arguments in memory to match a phrase. It writes no file,
-opens no socket, logs nothing, and keeps no state across restarts. Nothing
-leaves the process.
+The plugin reads tool arguments in memory to match a phrase, and reads its pack and
+`SKILL.md` from disk at load. It opens no socket and keeps no state across restarts.
+It writes one file, and only when `auditPath` is set: one JSONL line per hit, holding
+the word, the path and up to 120 characters of the written text. Nothing leaves the
+process.
 
 ## Limits
 
