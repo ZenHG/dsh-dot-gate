@@ -29,6 +29,22 @@ export function defaultPackPath() {
   return join(dirname(fileURLToPath(import.meta.url)), '..', 'packs', 'generic.json')
 }
 
+const EVIDENCE_ATOM = 'sources>=minSources'
+
+/**
+ * A pack that declares an evidence floor it never composes enforces nothing:
+ * minSources is mandatory, so a pack without this rule states a floor and then
+ * never applies it, and an empty verdict passes. A check with `over` is a loop
+ * over a collection, which is vacuous when the collection is empty, so it does
+ * not count. A check scoped by `when` does count - it still applies to the
+ * claims the pack speaks about.
+ */
+function composesEvidenceFloor(rules) {
+  return Object.values(rules).some(
+    (rule) => Array.isArray(rule.checks) && rule.checks.some((check) => check.atom === EVIDENCE_ATOM && check.over === undefined),
+  )
+}
+
 function fail(key, want, got) {
   throw new TypeError('dot-gate pack: ' + key + ' must be ' + want + ' (got ' + JSON.stringify(got) + ')')
 }
@@ -62,6 +78,13 @@ export function validatePack(pack) {
   validateSection('rules', pack.rules)
   validateSection('warnings', pack.warnings)
   if (pack.rules === undefined) fail('rules', 'an object of rules', pack.rules)
+  if (!composesEvidenceFloor(pack.rules)) {
+    throw new TypeError(
+      'dot-gate pack: rules must compose ' + EVIDENCE_ATOM + ' without over; thresholds.minSources is ' +
+        pack.thresholds.minSources + ' but no rule applies it, so a verdict with no sources would pass' +
+        ' (got rules: ' + Object.keys(pack.rules).join(', ') + ')',
+    )
+  }
   for (const key of ['metrics', 'liveVars']) {
     const table = pack[key]
     if (table === undefined || table === null || typeof table !== 'object') fail(key, 'an object', table)

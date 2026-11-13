@@ -6,11 +6,12 @@
  * cover the rest of the input space: packs and evidence are built through the same schema
  * validatePack enforces, then each claim is checked over hundreds of random samples.
  *
- * Two of the four claims are NOT true of *every* schema-valid pack, and the code says so:
- * a pack may compose no sources rule at all (pack.mjs only asks that rules be an object),
- * and a rule whose when does not match the verdict is skipped (evaluate.mjs applies()).
- * Those properties therefore state the precondition the interpreter actually needs instead
- * of asserting a wider claim than the code makes. See the comment above each test.
+ * Two of the four claims are true only under a precondition the interpreter needs, and the
+ * code says why: a rule whose when does not match the verdict is skipped (evaluate.mjs
+ * applies()), and a check with over loops over a collection that may be empty. Those
+ * properties state the precondition rather than asserting a wider claim than the code makes.
+ * A third gap used to exist - a pack with no sources rule at all - and validatePack now
+ * refuses one, which is why every generated pack below carries R1 unconditionally.
  */
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -73,18 +74,21 @@ const arbProbe = fc.constantFrom(
   { hits: 1 },
 )
 
-/** At least one rule or warning is present, so "remove one rule" always has a target. */
+/**
+ * At least one rule besides the evidence floor, so "remove one rule" always has a target.
+ * R1 is not generated here: validatePack requires an applicable sources rule, so every pack
+ * carries it unconditionally, and removing it voids the pack instead of relaxing it.
+ */
 const arbPresent = fc
   .record({
-    R1: fc.boolean(),
     R2: fc.boolean(),
     R3: fc.boolean(),
     R4: fc.boolean(),
     R5: fc.boolean(),
     W1: fc.boolean(),
   })
-  // At least one entry in `rules` (a warning alone would leave nothing to remove).
-  .map((present) => (present.R1 || present.R2 || present.R3 || present.R4 || present.R5 ? present : { ...present, R1: true }))
+  // At least one real rule (a warning alone would leave nothing to remove).
+  .map((present) => (present.R2 || present.R3 || present.R4 || present.R5 ? present : { ...present, R5: true }))
 
 /** Everything a pack varies, before it is assembled into the schema's shape. */
 const arbPackShape = fc.record({
@@ -109,9 +113,8 @@ function packFrom(shape, opts = {}) {
   const warnings = {}
   const metrics = { ...shape.metrics }
 
-  if (opts.r1Always === true || shape.present.R1) {
-    rules.R1 = ruleWith(opts.r1Always === true ? 'always' : shape.whens.R1, [{ atom: 'sources>=minSources' }])
-  }
+  // Mandatory: a pack that declares thresholds.minSources must compose the atom that applies it.
+  rules.R1 = ruleWith(opts.r1Always === true ? 'always' : shape.whens.R1, [{ atom: 'sources>=minSources' }])
   if (shape.present.R2) {
     rules.R2 = ruleWith(shape.whens.R2, [{ atom: 'counter_search_done' }, { atom: 'counter_search_clear' }])
   }
@@ -301,12 +304,17 @@ test('property (c): removing a rule only relaxes the verdict', () => {
   fc.assert(
     fc.property(arbPackAndVerdict, fc.nat({ max: 1000 }), ({ shape, verdict }, pick) => {
       const enabledPack = validatePack(packFrom(shape))
-      const ids = Object.keys(enabledPack.rules)
-      const removedId = ids[pick % ids.length]
+      const removable = Object.keys(enabledPack.rules).filter((id) => id !== 'R1')
+      const removedId = removable[pick % removable.length]
 
       const disabledPack = structuredClone(enabledPack)
       delete disabledPack.rules[removedId]
       validatePack(disabledPack) // relaxing a pack must still leave a legal pack
+
+      // The floor is the one rule whose removal does not relax the pack, it voids it.
+      const voided = structuredClone(enabledPack)
+      delete voided.rules.R1
+      assert.throws(() => validatePack(voided), /sources>=minSources/)
 
       const compare = (evidence) => {
         const before = checkVerdict(evidence, { pack: enabledPack })

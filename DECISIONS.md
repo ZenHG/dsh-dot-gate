@@ -115,6 +115,33 @@ can be used. That is the correct order.
 **Reopens if** the mechanism turns out to need a starter vocabulary - then it is a small,
 deliberately generic one, not a study's.
 
+## A7 · A pack that declares an evidence floor must compose it
+
+**Decided** 2026-11-13, after the property suite showed an empty verdict passing a pack that
+carried no sources rule.
+
+**Rests on**
+- `[判断]` `thresholds.minSources` is mandatory and must be a positive integer, so every pack
+  already states an evidence floor. A pack that states one and never composes it does not have a
+  weaker guarantee - it has none, because the interpreter only runs the rules a pack composes.
+- `[论文·窗口外]` SIGIL (arXiv:2607.27309): the value of a validated intermediate form comes from
+  refusals at load time, not from warnings at run time.
+- `[判断]` A check with `over` loops over a registry, and an empty registry makes it vacuously
+  true, so such a check cannot serve as the floor.
+
+**Enforced** `validatePack` throws when no rule composes `sources>=minSources` without `over`;
+the Python gate returns the same error. Four tests hold the line: deleting the rule is refused, a
+sources check with `over` does not count, a sources rule scoped by `when` does count, and the
+"removing a rule only relaxes the verdict" property now also asserts that removing this one
+voids the pack instead.
+
+**Costs** A pack cannot check something narrower than "at least minSources distinct sources".
+That is deliberate: the tool exists to demand evidence, and this was the one hole where it did
+not. It is also a breaking change for any third-party pack - there are none yet.
+
+**Reopens if** a real domain needs a pack whose evidence floor is not a source count. The answer
+would be a new atom, not a hole in this one.
+
 ---
 
 ## Withdrawn

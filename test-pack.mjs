@@ -105,3 +105,29 @@ test('a rule cannot read another rule\'s outcome', () => {
   broken.rules.R2.checks = [{ atom: 'metric_registered', over: 'metrics' }, { atom: 'R1-result' }]
   assert.throws(() => validatePack(broken), /atom/)
 })
+
+
+
+test('a pack that declares an evidence floor but never composes it is refused', () => {
+  const { pack } = loadH3()
+  const broken = structuredClone(pack)
+  delete broken.rules.R1
+  // thresholds.minSources is still 3, but no rule applies it, so a verdict with no sources passes.
+  assert.throws(() => validatePack(broken), /sources>=minSources/)
+})
+
+test('a sources check over a collection does not count as the evidence floor', () => {
+  const { pack } = loadH3()
+  const broken = structuredClone(pack)
+  broken.rules.R1.checks = [{ atom: 'sources>=minSources', over: 'metrics' }]
+  // Looping over a registry is vacuously true when the registry is empty.
+  assert.throws(() => validatePack(broken), /without over/)
+})
+
+test('a sources check scoped to negative claims still counts as the floor', () => {
+  const { pack } = loadH3()
+  const scoped = structuredClone(pack)
+  scoped.rules.R1.when = 'negative'
+  // Scoping narrows when the floor applies; it does not remove it.
+  assert.equal(validatePack(scoped).name, 'h3-camera-study')
+})
