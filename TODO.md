@@ -4,43 +4,31 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Now
 
-- [ ] **Confirm `agent/turn-stopping` steering in a live turn** - the code path is tested but no real
-      turn has been observed taking the extra step. Criterion: one real turn shows it. The soft
-      reminder, by contrast, was observed firing in a real turn on 2026-11-13: writing a trigger word
-      under `Wiki/` produced the nudge inside the tool result.
-
-- [ ] **Make the public text match the code.** A read-only audit of every user-facing file found flat
-      contradictions, not hedges. In order of damage per line changed:
-      (1) "check ... **before** it writes" (`README.md:3-4`, `package.json:4`, `index.js:3-4`) is false by
-      default - `hardMode` is off, so the write lands first; qualify it with the mode.
-      (2) "**No network, no files, no persistence.**" (`SCOPE.md:35-36`, `README.md:113-115`,
-      `CONTRIBUTING.md:24-26`, `CHANGELOG.md:26`) is contradicted by `readFileSync` of the pack and the
-      skill and by `appendFileSync` for `auditPath`; and "it never blocks" (`README.md:25`,
-      `SCOPE.md:33`) is contradicted by hard mode's deny.
-      (3) "if a hit was never addressed, object once at the close boundary" (`README.md:64`,
-      `CHANGELOG.md:8-9`, `index.js:254-257`) - see the next item, which the audit measured.
-      Also: `skills/dot/SKILL.md:41` promises gate exit codes 0/1/2 from a CLI the package does not ship,
-      and `:31` promises "independent sources, each with a URL and a date" where `sourcesOf` counts
-      distinct URLs only. Criterion: each claim is either true of the shipped default or qualified in
-      one sentence, and no file states a capability the code lacks.
-
-- [ ] **Fix or document that steering cannot fire in the default configuration.** `steerAtTurnEnd`
-      is meant to object at the close boundary when a hit was never addressed. It cannot: the mid-turn
-      reminder runs first and clears the hit (`index.js:287`), so turn-stopping finds nothing. Measured:
-      default config gives 1 reminder and 0 steers; only `maxPerTurn: 0` with `steerAtTurnEnd: true`
-      gives 1 steer. `test.mjs` calls turn-stopping without a pre-step, which is why the suite never
-      saw it. Criterion: either the hit survives until the close boundary so the documented behaviour
-      happens, or the docs say the two keys interact and the test pins that.
-
 - [ ] **Collect 30 labelable hits and have two people label them** - the tooling exists
-      (`scripts/labelled-corpus.mjs --export / --score`), so the remaining work is data and judgement,
-      not code. Two things must happen first: the host must be restarted so the running plugin emits
-      `snippet` (it is installed as a junction to this repo, so the files are already current on disk,
-      but the process still has the old build in memory), and every hit collected before that restart
-      is unusable for labelling because it has no text. Criterion: precision and Cohen's kappa printed
+      (`scripts/labelled-corpus.mjs --export / --score`) and the pipeline was proven end to end on
+      2026-11-13: a probe write produced one audit line carrying the word, the path and the snippet.
+      What remains is data and judgement, not code. Criterion: precision and Cohen's kappa printed
       with intervals and their n.
 
 ## Done
+
+- [x] **Steering is reachable, and pinned by two tests** - `steerAtTurnEnd` could never fire with the
+      default `maxPerTurn: 1`: the mid-turn reminder moved the hit into a state the close boundary
+      never read. The hit now survives the reminder in its own field, a monitored write to the same
+      path without the trigger word clears it, and the close boundary objects to whichever of the two
+      is still pending. Both ends have a test, and reverting the fix was observed to fail the first
+      one by name.
+
+- [x] **The public text now says what the code does** - eleven claims corrected at the source after a
+      read-only audit: "before it writes" became mode-qualified, "no files, no persistence" became
+      "reads its pack and skill, appends only when auditPath is set", the skill stopped promising a
+      CLI gate it does not ship, the glossary stopped calling a stored status a proof, and both paper
+      citations regained the conditions their abstracts state. DECISIONS A1 also records that this
+      repository ships one implementation and that the crosscheck is a local check.
+
+- [x] **The hygiene gate caught its own author** - the A1 rewrite quoted a local drive path, and
+      `S2 no local drive path in public text` failed on it. That is the gate working on the person
+      writing the gate; the commit was amended rather than pushed red.
 
 - [x] **Labelled-corpus tooling, and the snippet that makes a hit labelable** - a hit record carried a
       path and a word but not the text that triggered it, so nothing could be labelled after the fact.
@@ -54,7 +42,15 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
       test runner, 169 s. The first reading of 57.06% was wrong in a way worth keeping: the runner's
       command was a hard-coded file list, so the property suite was never part of the score, and the
       property tests turned out to kill 40 more mutants (evaluate.mjs 67% -> 81%). The config now reads
-      `scripts.test` from package.json, so the measured suite and the shipped suite cannot drift.
+      `scripts.test` from package.json. That fixed drift between the runner and the suite, not between
+      the repository and the tarball: two test files were missing from `files[]`, so the published
+      package ran 52 of 66 tests and pack-verify could not tell. Both are fixed now.
+
+- [x] **Mutation re-measured after the steering change** - 63.08% over 1189 mutants (750 killed / 439
+      survived), 3 min 34 s. The mutant population grew from 1095 when `index.js` changed, so the drop
+      from 63.84% is not a regression - a percentage over a different mutant set is a different
+      measurement, and comparing the two as if they were one number would be the error this file keeps
+      recording.
 - [x] **Property-based tests** - `test-property.mjs`, four invariants over 2000 generated packs, 0.3 s.
       Two premises had to be restated because the code disagrees with them: as written, "zero sources
       never passes" and "an unregistered quantity never passes" are false for an arbitrary pack. A third
