@@ -134,6 +134,9 @@ process.
 
 One page from "is this worth doing" to "released": [PROCESS.md](./PROCESS.md).
 
+What broke while building the companion robot, with the error text and the command that produced it:
+[docs/running-a-plugin-robot.md](./docs/running-a-plugin-robot.md) ([中文](./docs/running-a-plugin-robot.zh.md)).
+
 ## License
 
 MIT
