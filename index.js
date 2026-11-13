@@ -162,14 +162,61 @@ function matchCall(args, opts, pattern, prefixes) {
   if (path === '') return null
   if (!prefixes.some((pre) => path.includes(pre))) return null
   const body = args.content === undefined ? (args.new_string === undefined ? '' : args.new_string) : args.content
-  const text = String(body)
+  // A tool argument the host promised is a string but is not must not break the
+  // turn: no readable text means no hit, and the write goes on unchanged.
+  let text
+  try {
+    text = String(body)
+  } catch {
+    return null
+  }
   const global = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
   for (const found of text.matchAll(global)) {
     if (found.index === undefined) continue
     if (isQuoted(text, found.index, found[0].length)) continue
-    return { word: found[0], path }
+    return { word: found[0], path, snippet: snippetOf(text, found.index, found[0].length) }
   }
   return null
+}
+
+// A hit record used to say only which word fired and where. That is enough to count
+// hits and impossible to label afterwards: the text that actually triggered the gate
+// lived only in the tool call and was gone by the time anyone reviewed the log. The
+// audit line therefore carries a clipped copy of the matching text. The audit log is
+// already opt-in (config.auditPath), so this adds bytes to a log nobody gets unless
+// they asked for one; it does not add a second switch.
+const SNIPPET_BUDGET = 120
+
+/**
+ * The written text around one match, flattened to a single short line.
+ *
+ * Deliberately defensive: labelling must never become a reason a write fails, so a
+ * value that cannot be read (a hostile object, a detached buffer) yields '' rather
+ * than throwing. The caller treats '' as "no snippet captured", which the corpus
+ * export shows as an unlabelable row instead of silently inventing context.
+ */
+export function snippetOf(value, index, length) {
+  try {
+    const text = String(value)
+    if (text === '') return ''
+    const at = Number.isFinite(index) ? Math.max(0, Math.trunc(index)) : 0
+    const len = Number.isFinite(length) ? Math.max(0, Math.trunc(length)) : 0
+    const slack = Math.max(0, Math.floor((SNIPPET_BUDGET - len) / 2))
+    const from = Math.max(0, at - slack)
+    const to = Math.min(text.length, at + len + slack)
+    let body = text.slice(from, to).replace(/\s+/g, ' ').trim()
+    const room = SNIPPET_BUDGET - (from > 0 ? 1 : 0) - (to < text.length ? 1 : 0)
+    if (body.length > room) body = body.slice(0, room).trim()
+    // A code-unit slice can cut a surrogate pair in half; drop the orphan rather
+    // than writing an unpaired surrogate into JSON.
+    const first = body.charCodeAt(0)
+    if (first >= 0xdc00 && first <= 0xdfff) body = body.slice(1)
+    const last = body.charCodeAt(body.length - 1)
+    if (last >= 0xd800 && last <= 0xdbff) body = body.slice(0, -1)
+    return (from > 0 ? '…' : '') + body + (to < text.length ? '…' : '')
+  } catch {
+    return ''
+  }
 }
 
 function makeAudit(opts) {
@@ -227,8 +274,8 @@ export function apply(ctx, config) {
     const args = d.arguments === undefined || d.arguments === null ? {} : d.arguments
     const hit = matchCall(args, opts, pattern, prefixes)
     if (hit === null) return
-    s.hit = { word: hit.word, path: hit.path, tool }
-    audit({ event: 'remind', mode: 'soft', tool, path: hit.path, word: hit.word })
+    s.hit = { word: hit.word, path: hit.path, tool, snippet: hit.snippet }
+    audit({ event: 'remind', mode: 'soft', tool, path: hit.path, word: hit.word, snippet: hit.snippet })
   })
 
   // The reminder above arrives after the file is already on disk. This hook is the
@@ -241,7 +288,7 @@ export function apply(ctx, config) {
       const args = execution.arguments === undefined || execution.arguments === null ? {} : execution.arguments
       const hit = matchCall(args, opts, pattern, prefixes)
       if (hit === null) return next()
-      audit({ event: 'deny', mode: 'hard', tool, path: hit.path, word: hit.word })
+      audit({ event: 'deny', mode: 'hard', tool, path: hit.path, word: hit.word, snippet: hit.snippet })
       return {
         kind: 'deny',
         reason: 'dot-gate: 这次写入包含判断性措辞「' + hit.word + '」（' + hit.path + '）。'
@@ -264,7 +311,7 @@ export function apply(ctx, config) {
       const hit = s.hit
       s.hit = null
       s.steered = 1
-      audit({ event: 'steer', mode: 'soft', tool: hit.tool, path: hit.path, word: hit.word })
+      audit({ event: 'steer', mode: 'soft', tool: hit.tool, path: hit.path, word: hit.word, snippet: hit.snippet === undefined ? '' : hit.snippet })
       payload.agent.steer({
         role: 'user',
         content: [{ type: 'text', text: REMINDER(hit) }],

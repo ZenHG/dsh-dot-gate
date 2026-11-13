@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { apply, name } from './index.js'
+import { apply, name, snippetOf } from './index.js'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -149,6 +149,20 @@ test('hardMode denies a matching write with a model-facing reason', async () => 
   assert.match(decision.reason, /做不到/)
 })
 
+test('a write still succeeds when the snippet cannot be produced', async () => {
+  const h = harness({ hardMode: true })
+  const hostile = new Proxy({}, { get() { throw new Error('not text') } })
+  const s = { id: 'a5' }
+  h.emit(s, turnStart)
+  h.emit(s, call('write', { file_path: 'Wiki/X.md', content: hostile }))
+  assert.equal((await h.step(s)).messages.length, 0, 'the event path survives unreadable arguments')
+  const decision = await h.handlers.get('tools/pre-execute')(
+    { name: 'write', arguments: { file_path: 'Wiki/X.md', content: hostile } },
+    async () => ({ kind: 'allow' }),
+  )
+  assert.equal(decision.kind, 'allow', 'the guarded write is not denied because a snippet failed')
+})
+
 test('hardMode lets a neutral write through', async () => {
   const h = harness({ hardMode: true })
   const decision = await preExecute(h)({ name: 'write', arguments: { file_path: 'Wiki/X.md', content: '跑了 124 帧。' } }, async () => ({ kind: 'allow' }))
@@ -198,6 +212,50 @@ test('writes one audit line per hit when auditPath is set', async () => {
   const entry = JSON.parse(lines[0])
   assert.equal(entry.event, 'remind')
   assert.equal(entry.mode, 'soft')
+  assert.deepEqual(Object.keys(entry).sort(), ['at', 'event', 'mode', 'path', 'snippet', 'tool', 'word'])
+  assert.equal(entry.snippet, '这个模型做不到。')
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('clips the audit snippet to one short line around the word', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dotgate-clip-'))
+  const file = join(dir, 'a.jsonl')
+  const h = harness({ auditPath: file })
+  const s = { id: 'a3' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('甲'.repeat(400) + '\n' + '做不到' + '\n' + '乙'.repeat(400)))
+  await h.step(s)
+  const entry = JSON.parse(readFileSync(file, 'utf8').trim())
+  assert.match(entry.snippet, /做不到/)
+  assert.ok(entry.snippet.length <= 122, 'snippet is bounded: ' + entry.snippet.length)
+  assert.ok(!/[\r\n]/.test(entry.snippet), 'snippet is one line')
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('a snippet that cannot be produced is empty, never throws', () => {
+  const hostile = new Proxy({}, { get() { throw new Error('not text') } })
+  assert.equal(snippetOf(hostile, 0, 1), '')
+})
+
+test('every audit event carries the snippet', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dotgate-events-'))
+  const file = join(dir, 'a.jsonl')
+  const h = harness({ auditPath: file, hardMode: true, steerAtTurnEnd: true })
+  const s = { id: 'a4' }
+  const body = '这个模型做不到。'
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite(body))
+  await h.handlers.get('tools/pre-execute')(
+    { name: 'write', arguments: { file_path: 'Wiki/Judge.md', content: body } },
+    async () => ({ kind: 'allow' }),
+  )
+  h.handlers.get('agent/turn-stopping')({ agent: { session: s, steer() {} }, turn: 1 })
+  const entries = readFileSync(file, 'utf8').trim().split('\n').map((line) => JSON.parse(line))
+  assert.deepEqual(entries.map((e) => e.event), ['remind', 'deny', 'steer'])
+  for (const entry of entries) {
+    assert.deepEqual(Object.keys(entry).sort(), ['at', 'event', 'mode', 'path', 'snippet', 'tool', 'word'])
+    assert.equal(entry.snippet, body)
+  }
   rmSync(dir, { recursive: true, force: true })
 })
 
