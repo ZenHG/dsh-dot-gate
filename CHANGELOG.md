@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.1
+
+Name reservation release. The behaviour described below ships as-is; 0.0.1 exists so
+the package name is held. Interfaces may change before 0.1.0.
+
 ## 0.1.0
 
 First release.

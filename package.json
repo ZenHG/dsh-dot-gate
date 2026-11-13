@@ -1,6 +1,6 @@
 {
   "name": "dsh-dot-gate",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Make an agent check its own verdict gate before it writes a negative capability conclusion: one reminder, triggered by the action, not by a tool-call counter.",
   "keywords": [
     "deepseek-harness",
