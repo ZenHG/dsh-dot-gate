@@ -4,13 +4,23 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Now
 
-- [ ] **Mutation testing** (`npx stryker run`) - criterion: a score is reported. Below ~60%
-      the suite is decoration, and that gets fixed before any new feature.
-- [ ] **Property-based tests** (`fast-check`) - criterion: these invariants hold over randomised
-      verdicts: (a) zero distinct sources never passes, (b) an unregistered quantity never passes,
-      (c) a rule that is switched off cannot produce a failure, (d) unknown atoms are always refused.
-- [ ] **False-positive report routine** - criterion: one weekly message with hits, denials and how
-      they split, readable without opening the code.
+- [ ] **Raise the mutation score past 60%.** Measured 56.69% (606 killed / 463 survived of 1069)
+      before anyone asked. Ten survivors are behaviour changes the suite does not catch, each replayed
+      by hand: `runs >= minRuns` tightened to `>` (`evaluate.mjs:68`); `counter_search_done` forced
+      to return false (`evaluate.mjs:50`); `minSources < 1` rejecting a legal 1 (`pack.mjs:60`);
+      `minRuns < 1` the same (`pack.mjs:61`); an empty `checks: []` accepted (`pack.mjs:42`); a pack
+      with no `rules` key accepted, after which everything passes (`pack.mjs:64`); `probe.hits > 0`
+      loosened to `>=` (`evaluate.mjs:54`); `maxPerTurn < 0` rejecting 0 (`index.js:132`);
+      `words.some` degraded to `every` (`index.js:129`); the interpreter's unknown-atom fallback
+      answering true (`evaluate.mjs:71`). Criterion: `npm run mutation` reports at least 60%, and each
+      of the ten has a test that goes red when the mutation is replayed.
+
+- [ ] **Decide what a pack without a sources rule means.** The property suite found that a schema-valid
+      pack may compose no `sources>=minSources` check at all, and then an empty evidence object passes.
+      The interpreter only runs rules the pack composes (`evaluate.mjs:100-102`), so the guarantee is
+      per-pack, not per-tool. The shipped default does carry `R1`, so this is about third-party packs.
+      Criterion: either `validatePack` refuses a pack whose `rules` contain no applicable sources
+      check, or `SCOPE.md` says plainly that it does not.
 
 ## Next
 
@@ -20,6 +30,18 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
       turn has been observed taking the extra step. Criterion: one real turn shows it.
 - [ ] **Labelled corpus** - 30 real hits from `auditPath`, labelled by two raters; report
       precision, recall and Cohen's kappa with intervals.
+
+## Done
+
+- [x] **Mutation testing** - 56.69% over 1069 mutants, Stryker 10.1.1 driven through its `command`
+      test runner, 119 s. Being below 60% is the result, not a failure of the measurement.
+- [x] **Property-based tests** - `test-property.mjs`, four invariants over 2000 generated packs, 0.3 s.
+      Two premises had to be restated because the code disagrees with them: as written, "zero sources
+      never passes" and "an unregistered quantity never passes" are false for an arbitrary pack. A third
+      was simply wrong - there is no `enabled` flag, so "switched off" can only mean removed.
+- [x] **False-positive report routine** - `node scripts/audit-report.mjs --path <log> --since 7d`
+      prints the split, the per-day rate and one decision sentence; `--selftest` asserts the arithmetic
+      in memory, so the routine is checkable before a real log exists.
 
 ## Deliberately not doing
 
