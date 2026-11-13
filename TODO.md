@@ -18,13 +18,6 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
       answering true (`evaluate.mjs:71`). Criterion: each of the ten has a test that goes red when the
       mutation is replayed.
 
-- [ ] **Decide what a pack without a sources rule means.** The property suite found that a schema-valid
-      pack may compose no `sources>=minSources` check at all, and then an empty evidence object passes.
-      The interpreter only runs rules the pack composes (`evaluate.mjs:100-102`), so the guarantee is
-      per-pack, not per-tool. The shipped default does carry `R1`, so this is about third-party packs.
-      Criterion: either `validatePack` refuses a pack whose `rules` contain no applicable sources
-      check, or `SCOPE.md` says plainly that it does not.
-
 ## Next
 
 - [ ] **Domain pack generator** (read-only subagent) - takes a domain description, emits a pack
@@ -45,6 +38,10 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
       Two premises had to be restated because the code disagrees with them: as written, "zero sources
       never passes" and "an unregistered quantity never passes" are false for an arbitrary pack. A third
       was simply wrong - there is no `enabled` flag, so "switched off" can only mean removed.
+- [x] **A pack without a sources rule is now refused** (DECISIONS.md A7). `thresholds.minSources` was
+      mandatory while nothing applied it, so a pack could state an evidence floor and enforce none of
+      it. `validatePack` now throws when no rule composes `sources>=minSources` without `over`; the
+      Python gate returns the same error. A specified breaking change - no third-party packs exist yet.
 - [x] **False-positive report routine** - `node scripts/audit-report.mjs --path <log> --since 7d`
       prints the split, the per-day rate and one decision sentence; `--selftest` asserts the arithmetic
       in memory, so the routine is checkable before a real log exists.
