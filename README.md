@@ -61,6 +61,8 @@ reloads; Node code does not.
 | key | default | meaning |
 |---|---|---|
 | `maxPerTurn` | `1` | reminders per turn; `0` disables injection |
+| `steerAtTurnEnd` | `false` | if a hit was never addressed, object once at the close boundary; the turn then runs another step |
+| `auditPath` | `''` | JSONL path for one line per hit; empty means the plugin writes no file at all |
 | `paths` | `["Wiki/"]` | a write is inspected only if its path contains one of these |
 | `tools` | `["write","edit"]` | tool names to inspect |
 | `words` | see above | any match marks the write as a capability claim |

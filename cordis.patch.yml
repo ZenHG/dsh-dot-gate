@@ -6,6 +6,11 @@
         # false = remind after the write; true = refuse the write before it lands.
         # Start with false: a gate that blocks on day one gets uninstalled.
         hardMode: false
+        # true = if a hit was only reminded about, object once at the close boundary
+        # and make the turn run another step. Off by default.
+        steerAtTurnEnd: false
+        # JSONL path for one line per hit; empty string = write nothing at all
+        auditPath: ''
         # how many reminders per turn; 0 disables injection entirely
         maxPerTurn: 1
         # only paths containing one of these are inspected

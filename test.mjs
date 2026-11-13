@@ -212,3 +212,31 @@ test('writes no audit file when auditPath is empty', async () => {
   assert.equal(existsSync(file), false)
   rmSync(dir, { recursive: true, force: true })
 })
+
+test('steerAtTurnEnd is off by default', () => {
+  const h = harness()
+  assert.equal(h.handlers.get('agent/turn-stopping'), undefined)
+})
+
+test('steers once at the close boundary when a hit was never addressed', async () => {
+  const h = harness({ steerAtTurnEnd: true })
+  const steers = []
+  const s = { id: 't1' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  const agent = { session: s, steer: (m) => steers.push(m) }
+  h.handlers.get('agent/turn-stopping')({ agent, turn: 1 })
+  h.handlers.get('agent/turn-stopping')({ agent, turn: 1 })
+  assert.equal(steers.length, 1)
+  assert.match(steers[0].content[0].text, /做不到|结论闸/)
+  assert.equal(steers[0].source.kind, 'plugin:dot-gate')
+})
+
+test('does not steer when nothing was hit', () => {
+  const h = harness({ steerAtTurnEnd: true })
+  const steers = []
+  const s = { id: 't2' }
+  h.emit(s, turnStart)
+  h.handlers.get('agent/turn-stopping')({ agent: { session: s, steer: (m) => steers.push(m) }, turn: 1 })
+  assert.equal(steers.length, 0)
+})

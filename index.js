@@ -80,6 +80,10 @@ const DEFAULTS = {
   // path to get one JSONL line per hit, which is how the false-positive rate gets
   // measured before hardMode is switched on.
   auditPath: '',
+  // When a hit was only ever reminded about, the turn can still end as if the claim
+  // had been checked. Steering once at the close boundary asks for that check in the
+  // one place the turn cannot ignore. Off by default for the same reason hardMode is.
+  steerAtTurnEnd: false,
   maxPerTurn: 1,
   paths: ['Wiki/'],
   tools: ['write', 'edit'],
@@ -118,6 +122,7 @@ function resolveOptions(config) {
   if (!Number.isInteger(opts.maxPerTurn) || opts.maxPerTurn < 0) bad('maxPerTurn', 'a non-negative integer')
   if (typeof opts.hardMode !== 'boolean') bad('hardMode', 'a boolean')
   if (typeof opts.auditPath !== 'string') bad('auditPath', 'a string path, or an empty string to disable')
+  if (typeof opts.steerAtTurnEnd !== 'boolean') bad('steerAtTurnEnd', 'a boolean')
   return opts
 }
 
@@ -177,7 +182,7 @@ export function apply(ctx, config) {
   const stateOf = (id) => {
     let s = states.get(id)
     if (s === undefined) {
-      s = { nudged: 0, hit: null }
+      s = { nudged: 0, steered: 0, hit: null }
       states.set(id, s)
     }
     return s
@@ -190,6 +195,7 @@ export function apply(ctx, config) {
 
     if (type === 'turn/start') {
       s.nudged = 0
+      s.steered = 0
       s.hit = null
       return
     }
@@ -223,6 +229,28 @@ export function apply(ctx, config) {
           + '先把结论过一遍证据闸（来源数量、同模型正例检索、量名是否登记、对照变量是否有效、可复跑命令与观测值），'
           + '改成带证据的写法再写。若这是引用别人的说法，请标明是引用。',
       }
+    })
+  }
+
+  // The reminder above fires mid-turn and is easy to walk past. This runs at the close
+  // boundary: objecting there steers the agent, and the machine re-reads its inbox and
+  // runs another step. One objection per turn, or a model that never satisfies the gate
+  // would never end the turn.
+  if (opts.steerAtTurnEnd) {
+    ctx.on('agent/turn-stopping', (payload) => {
+      const session = payload === undefined || payload === null || payload.agent === undefined ? undefined : payload.agent.session
+      if (session === undefined || session === null || typeof session.id !== 'string') return
+      const s = stateOf(session.id)
+      if (s.hit === null || s.steered >= 1) return
+      const hit = s.hit
+      s.hit = null
+      s.steered = 1
+      audit({ event: 'steer', mode: 'soft', tool: hit.tool, path: hit.path, word: hit.word })
+      payload.agent.steer({
+        role: 'user',
+        content: [{ type: 'text', text: REMINDER(hit) }],
+        source: { kind: 'plugin:dot-gate' },
+      })
     })
   }
 

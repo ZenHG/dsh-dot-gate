@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Ignores trigger words inside backticks and paired quotes: a document that describes
+  this plugin mentions the words, it does not assert them.
+- `auditPath`: optional JSONL log, one line per hit. Empty by default.
+- `steerAtTurnEnd`: object once at the close boundary when a hit was never addressed,
+  so the turn cannot end as if the claim had been checked.
+
 ## 0.0.1
 
 Name reservation release. The behaviour described below ships as-is; 0.0.1 exists so
