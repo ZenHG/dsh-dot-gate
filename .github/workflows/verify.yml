@@ -1,0 +1,18 @@
+name: verify
+
+# The repository ships a single command that runs every gate. CI exists so the
+# evidence rules in CONTRIBUTING have an executor instead of being advice.
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run verify

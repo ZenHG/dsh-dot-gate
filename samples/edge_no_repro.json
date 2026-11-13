@@ -1,0 +1,22 @@
+{
+  "claim": "boundary sample",
+  "polarity": "observation",
+  "sources": [
+    {
+      "url": "a"
+    },
+    {
+      "url": "b"
+    },
+    {
+      "url": "c"
+    }
+  ],
+  "metrics": [
+    "farband.far_scale_est"
+  ],
+  "repro": {},
+  "tested": {
+    "runs": 3
+  }
+}

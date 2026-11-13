@@ -1,0 +1,30 @@
+{
+  "claim": "boundary sample",
+  "polarity": "observation",
+  "sources": [
+    {
+      "url": "a"
+    },
+    {
+      "url": "b"
+    },
+    {
+      "url": "c"
+    }
+  ],
+  "metrics": [
+    "farband.far_scale_est"
+  ],
+  "repro": {
+    "cmd": "run",
+    "observed": "0.79"
+  },
+  "tested": {
+    "runs": 3
+  },
+  "contrast": {
+    "diff_vars": [
+      "camera_direction_phrase"
+    ]
+  }
+}

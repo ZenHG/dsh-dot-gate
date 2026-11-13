@@ -1,0 +1,76 @@
+{
+  "name": "dsh-dot-gate",
+  "version": "0.1.0",
+  "description": "Make an agent check its own verdict gate before it writes a negative capability conclusion: one reminder, triggered by the action, not by a tool-call counter.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "cordis",
+    "agent",
+    "guardrail",
+    "verification",
+    "evidence",
+    "prompt-engineering"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./verdict": "./src/verdict.mjs",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "src/verdict.mjs",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "test.mjs",
+    "test-verdict.mjs",
+    "samples/",
+    "skills/"
+  ],
+  "os": [
+    "win32",
+    "darwin",
+    "linux"
+  ],
+  "engines": {
+    "node": ">=22.15.0",
+    "dsh": ">=0.2.1-rc.5"
+  },
+  "scripts": {
+    "test": "node --test test.mjs test-verdict.mjs",
+    "gate:secrets": "secretlint .",
+    "gate:publint": "publint",
+    "gate:hygiene": "node scripts/hygiene.mjs",
+    "gate:pack": "node scripts/pack-verify.mjs",
+    "crosscheck": "node scripts/cross-check.mjs",
+    "verify": "npm run gate:secrets && npm run gate:publint && npm run gate:hygiene && npm test && npm run gate:pack"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
+    "publint": "^0.3.25",
+    "secretlint": "^13.1.0",
+    "wait-on": "^9.5.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZenHG/dsh-dot-gate.git"
+  },
+  "homepage": "https://github.com/ZenHG/dsh-dot-gate#readme",
+  "bugs": {
+    "url": "https://github.com/ZenHG/dsh-dot-gate/issues"
+  }
+}

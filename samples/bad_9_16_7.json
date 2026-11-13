@@ -1,0 +1,41 @@
+{
+  "_what": "回归样本：2026-11-13 被用户当场否定的原裁定，必须 exit 1",
+  "claim": "在本模型里，变焦与机位前移无法通过动词或焦距数字区分",
+  "polarity": "negative",
+  "scope": "MiniMax-H3",
+  "sources": [
+    {
+      "url": "https://example.invalid/morphic-one-post",
+      "kind": "community",
+      "date": "2026-11-10"
+    }
+  ],
+  "same_model_positive_search": {
+    "done": false,
+    "queries": [],
+    "hits": 0
+  },
+  "contrast": {
+    "arms": [
+      "zA",
+      "zB"
+    ],
+    "diff_vars": [
+      "focal_length_number"
+    ]
+  },
+  "metrics": [
+    "bgscale.div_periph"
+  ],
+  "repro": {
+    "cmd": "python bgscale.py zA.mp4 zB.mp4",
+    "observed": "div_periph 0.026 / 0.009"
+  },
+  "tested": {
+    "run_ids": [
+      "zA",
+      "zB"
+    ],
+    "runs": 1
+  }
+}

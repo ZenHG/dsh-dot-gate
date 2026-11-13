@@ -1,0 +1,57 @@
+{
+  "_what": "回归样本：改正后的 zC 观察，必须 exit 0",
+  "claim": "zC（反向配对 / 124 帧 / 10 步）未产生 dolly-zoom：主体未锁定（脸 0.43×），远景 0.79 反而缩小",
+  "polarity": "observation",
+  "scope": "MiniMax-H3 / zC_00001_.mp4",
+  "sources": [
+    {
+      "url": "https://hailuoai.video/pages/knowledge/advanced-dolly-zoom-vertigo-effect",
+      "kind": "vendor",
+      "date": "2026-07-27"
+    },
+    {
+      "url": "https://hailuoai.video/pages/knowledge/dolly-zoom-vertigo-effect-ai-video-parody-hooks-guide",
+      "kind": "vendor",
+      "date": "2026-07-27"
+    },
+    {
+      "url": "https://loopforge.cc/projects/h3-camera-shots/dolly-zoom/",
+      "kind": "same_model_test",
+      "date": "2026-09-13"
+    },
+    {
+      "url": "https://stableyogi.com/blog/minimax-h3-camera-shots-11-tested-moves",
+      "kind": "same_model_test",
+      "date": "2026-09-16"
+    },
+    {
+      "url": "https://arxiv.org/abs/2610.39508",
+      "kind": "paper",
+      "date": "2026-10-29"
+    }
+  ],
+  "same_model_positive_search": {
+    "done": true,
+    "queries": [
+      "dolly zoom minimax h3",
+      "hailuo dolly zoom prompt"
+    ],
+    "hits": 2
+  },
+  "metrics": [
+    "h3_facescale.w_frac",
+    "farband.far_scale_est"
+  ],
+  "repro": {
+    "cmd": "python farband.py zC_00001_.mp4",
+    "observed": "far_scale_est=0.79; facescale 0.215->0.092"
+  },
+  "tested": {
+    "run_ids": [
+      "zC",
+      "zD",
+      "zA"
+    ],
+    "runs": 3
+  }
+}

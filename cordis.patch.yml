@@ -1,0 +1,22 @@
+# One loader row. Override by id from any cordis.patch.yml layer.
+- insert:
+    - id: dot-gate
+      name: dsh-dot-gate
+      config:
+        # how many reminders per turn; 0 disables injection entirely
+        maxPerTurn: 1
+        # only paths containing one of these are inspected
+        paths:
+          - Wiki/
+        # only these tools are inspected
+        tools:
+          - write
+          - edit
+        # a conclusion containing any of these is treated as a capability claim
+        words:
+          - 做不到
+          - 不区分
+          - 不可得
+          - 没有自由度
+          - cannot be done
+          - does not work

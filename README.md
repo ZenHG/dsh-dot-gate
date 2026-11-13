@@ -1,0 +1,94 @@
+# dsh-dot-gate
+
+Make an agent check its own verdict gate **before** it writes a negative
+capability conclusion into a knowledge base.
+
+## The problem
+
+An agent that keeps notes will eventually write something like *"this model
+cannot do X"* into a wiki. That sentence outlives the evidence it was based on.
+The usual reminder plugins fire on a **tool-call counter** - they nudge when the
+agent is busy. But the failure is not busyness, it is speed of judgement: one
+source is read, a capability is declared impossible, and the claim is committed.
+
+A counter-based nudge does not correlate with that failure. The action does.
+
+## What it does
+
+It watches `tool/call` / `tool/ptc-dispatch-start` for `write` and `edit`
+calls whose target path is under a watched prefix and whose body contains a
+configured phrase. On the next step it injects **one** reminder asking the agent
+to run the project's own gate and to state sources, counter-examples, the metric
+used, whether the contrasted variable is known to be effective, and a
+re-runnable command.
+
+It does not judge the claim and it never blocks. Whether three sources are enough
+is a policy question; this plugin only refuses to let the claim pass silently.
+
+## Install
+
+```
+dsh plugin --profile <name> add dsh-dot-gate
+```
+
+Then add `dsh-dot-gate` to `dsh.profile.bundles` in the profile's
+`package.json` and restart the host. Editing `cordis.patch.yml` config hot
+reloads; Node code does not.
+
+## Config
+
+```yaml
+- insert:
+    - id: dot-gate
+      name: dsh-dot-gate
+      config:
+        maxPerTurn: 1
+        paths: [Wiki/]
+        tools: [write, edit]
+        words: [做不到, cannot be done]
+```
+
+| key | default | meaning |
+|---|---|---|
+| `maxPerTurn` | `1` | reminders per turn; `0` disables injection |
+| `paths` | `["Wiki/"]` | a write is inspected only if its path contains one of these |
+| `tools` | `["write","edit"]` | tool names to inspect |
+| `words` | see above | any match marks the write as a capability claim |
+
+## The skill it ships
+
+The package also contributes a skill named `dot`, through the official skill
+registry rather than through a profile path:
+
+```js
+export const inject = ['skills']
+ctx.skills.registerProvider(() => ({ name: 'dot-gate', async list() { ... }, async get() { ... } }))
+```
+
+The skill body lives in `skills/dot/SKILL.md` and is read from disk when the
+registry lists it, so editing that file needs no rebuild. It describes the loop the
+plugin only nudges towards: collect sources, name a registered quantity, check that a
+contrasted variable is actually live, write down a re-run, then gate the conclusion.
+
+Why a provider and not a directory setting: `customSkillDirs` configures *one*
+existing provider. A plugin that wants to contribute skills should register its own,
+which is the seam the bundled skills use.
+
+## Privacy
+
+The plugin reads tool arguments in memory to match a phrase. It writes no file,
+opens no socket, logs nothing, and keeps no state across restarts. Nothing
+leaves the process.
+
+## Limits
+
+- It sees the call, so the file may already be on disk when the reminder lands.
+  The reminder asks for a check, not a revert.
+- Phrase matching is deliberately dumb. It will miss paraphrases and it will fire
+  on quotations of other people's claims.
+- It has no opinion about your gate. Point `words` at whatever your project
+  treats as a conclusion.
+
+## License
+
+MIT

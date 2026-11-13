@@ -1,0 +1,34 @@
+{
+  "claim": "boundary sample",
+  "polarity": "observation",
+  "sources": [
+    {
+      "url": "a"
+    },
+    {
+      "url": "b"
+    },
+    {
+      "url": "c"
+    }
+  ],
+  "metrics": [
+    "farband.far_scale_est"
+  ],
+  "repro": {
+    "cmd": "run",
+    "observed": "0.79"
+  },
+  "tested": {
+    "runs": 3
+  },
+  "contrast": {
+    "arms": [
+      "zA",
+      "zB"
+    ],
+    "diff_vars": [
+      "focal_length_number"
+    ]
+  }
+}
