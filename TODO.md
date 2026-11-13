@@ -4,13 +4,38 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Now
 
-- [ ] **Collect 30 labelable hits and have two people label them** - the tooling exists
-      (`scripts/labelled-corpus.mjs --export / --score`) and the pipeline was proven end to end on
-      2026-11-13: a probe write produced one audit line carrying the word, the path and the snippet.
-      What remains is data and judgement, not code. Criterion: precision and Cohen's kappa printed
-      with intervals and their n.
+- [ ] **Fix mention detection, which is where the false positives are** - the first precision
+      measurement (see Done) put wiki lines at 61.5% and session messages at 44.8%. Removing the weak
+      words does not help: the wiki number moves from 61.5% to 60.9%. What the false positives have in
+      common is that they *mention* the phrase rather than assert with it - balanced quotations, table
+      headers, rules being described, reports of what someone else said. `isQuoted` currently looks
+      only at the character immediately before or after the match, so a quoted sentence still fires.
+      Criterion: re-run the same 84-row corpus after the change and show the number move, with the old
+      and new interval side by side.
+
+- [ ] **Get a second human rater for kappa** - the 84 labels came from one blind rater. Precision has
+      an interval; agreement does not exist yet. Criterion: two raters over the same sheet, Cohen's
+      kappa printed with its n.
 
 ## Done
+
+- [x] **The history was enough: a first precision number, out of data already on disk** - 240 stored
+      sessions, 17,512 messages and 15,521 tool calls were already there, so the corpus never had to
+      wait a week. They were read through the session-query index, because the session files are
+      multi-frame zstd (8,776 frames each) and Node's decoder stops after the first. 89 candidate
+      occurrences of a trigger phrase, 84 after de-duplication, 26 of them lines in `Wiki/` - the
+      population closest to what the gate actually sees. One blind rater labelled all 84 against a
+      written codebook: wiki lines **61.5% [42.5, 77.6]**, session messages **44.8% [32.7, 57.5]**,
+      everything **50.0% [39.5, 60.5]**. Below the 70% bar, so 0.1.0 stays unpublished.
+      Two ideas died here. Narrowing the word list does nothing (61.5% -> 60.9%). And the history
+      cannot yield the gate's real hit log: most writes go through `run_code`, and across all 240
+      sessions only **5** direct `write`/`edit` calls touch `Wiki/`. Those hits were never recorded,
+      so this measures phrase precision on real text, not the hit log - stated that way on purpose.
+
+- [x] **The corpus builder had a bug, and the rater caught it** - the first sheet truncated every
+      session message to its first 260 characters, so in 54 of 62 rows the trigger word was not inside
+      the snippet being judged. The rater refused to guess and returned UNCLEAR, which is what exposed
+      it. Rebuilt with a 120-character window centred on the word, the same budget `snippetOf` uses.
 
 - [x] **Steering is reachable, and pinned by two tests** - `steerAtTurnEnd` could never fire with the
       default `maxPerTurn: 1`: the mid-turn reminder moved the hit into a state the close boundary
