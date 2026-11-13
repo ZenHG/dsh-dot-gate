@@ -49,7 +49,7 @@
     "dsh": ">=0.2.1-rc.5"
   },
   "scripts": {
-    "test": "node --test test.mjs test-verdict.mjs test-pack.mjs test-property.mjs",
+    "test": "node --test test.mjs test-verdict.mjs test-pack.mjs test-property.mjs test-survivors.mjs",
     "gate:secrets": "secretlint .",
     "gate:publint": "publint",
     "gate:hygiene": "node scripts/hygiene.mjs",
