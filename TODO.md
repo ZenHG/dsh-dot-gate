@@ -5,14 +5,27 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 ## Now
 
 - [ ] **Confirm `agent/turn-stopping` steering in a live turn** - the code path is tested but no real
-      turn has been observed taking the extra step. Criterion: one real turn shows it.
+      turn has been observed taking the extra step. Criterion: one real turn shows it. The soft
+      reminder, by contrast, was observed firing in a real turn on 2026-11-13: writing a trigger word
+      under `Wiki/` produced the nudge inside the tool result.
 
-## Next
-
-- [ ] **Labelled corpus** - 30 real hits from `auditPath`, labelled by two raters; report
-      precision, recall and Cohen's kappa with intervals.
+- [ ] **Collect 30 labelable hits and have two people label them** - the tooling exists
+      (`scripts/labelled-corpus.mjs --export / --score`), so the remaining work is data and judgement,
+      not code. Two things must happen first: the host must be restarted so the running plugin emits
+      `snippet` (it is installed as a junction to this repo, so the files are already current on disk,
+      but the process still has the old build in memory), and every hit collected before that restart
+      is unusable for labelling because it has no text. Criterion: precision and Cohen's kappa printed
+      with intervals and their n.
 
 ## Done
+
+- [x] **Labelled-corpus tooling, and the snippet that makes a hit labelable** - a hit record carried a
+      path and a word but not the text that triggered it, so nothing could be labelled after the fact.
+      The audit line now carries a bounded, whitespace-flattened `snippet` taken from the exact
+      `content`/`new_string` at hit time; it cannot fail a write. `scripts/labelled-corpus.mjs` exports a
+      CSV two raters can fill in and scores it: precision and recall with Wilson intervals, Cohen's
+      kappa with its n, disagreements counted rather than dropped, and recall reported as n/a when the
+      sheet is hit-only. `--selftest` asserts the arithmetic including a hand-computed kappa.
 
 - [x] **Mutation testing** - 60.80% over 1069 mutants, Stryker 10.1.1 driven through its `command`
       test runner, 169 s. The first reading of 57.06% was wrong in a way worth keeping: the runner's
