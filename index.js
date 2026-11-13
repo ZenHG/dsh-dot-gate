@@ -73,6 +73,9 @@ export const name = 'dot-gate'
 export const inject = ['skills']
 
 const DEFAULTS = {
+  // Off by default: a gate that can block someone's write on its first day gets
+  // uninstalled. Turn it on once the false-positive rate is known.
+  hardMode: false,
   maxPerTurn: 1,
   paths: ['Wiki/'],
   tools: ['write', 'edit'],
@@ -109,7 +112,17 @@ function resolveOptions(config) {
   if (!Array.isArray(opts.paths) || opts.paths.some((p) => typeof p !== 'string')) bad('paths', 'an array of strings')
   if (!Array.isArray(opts.tools) || opts.tools.some((t) => typeof t !== 'string')) bad('tools', 'an array of strings')
   if (!Number.isInteger(opts.maxPerTurn) || opts.maxPerTurn < 0) bad('maxPerTurn', 'a non-negative integer')
+  if (typeof opts.hardMode !== 'boolean') bad('hardMode', 'a boolean')
   return opts
+}
+
+function matchCall(args, opts, pattern, prefixes) {
+  const path = normalizePath(args.file_path === undefined ? (args.path === undefined ? args.file : args.path) : args.file_path)
+  if (path === '') return null
+  if (!prefixes.some((pre) => path.includes(pre))) return null
+  const body = args.content === undefined ? (args.new_string === undefined ? '' : args.new_string) : args.content
+  const hit = String(body).match(pattern)
+  return hit === null ? null : { word: hit[0], path }
 }
 
 export function apply(ctx, config) {
@@ -153,6 +166,25 @@ export function apply(ctx, config) {
     if (m === null) return
     s.hit = { word: m[0], path }
   })
+
+  // The reminder above arrives after the file is already on disk. This hook is the
+  // only place a write can actually be stopped: returning a denial materializes a
+  // model-facing reason and the write does not happen.
+  if (opts.hardMode) {
+    ctx.on('tools/pre-execute', async (execution, next) => {
+      const tool = String(execution === undefined || execution === null ? '' : execution.name)
+      if (!opts.tools.includes(tool)) return next()
+      const args = execution.arguments === undefined || execution.arguments === null ? {} : execution.arguments
+      const hit = matchCall(args, opts, pattern, prefixes)
+      if (hit === null) return next()
+      return {
+        kind: 'deny',
+        reason: 'dot-gate: 这次写入包含判断性措辞「' + hit.word + '」（' + hit.path + '）。'
+          + '先把结论过一遍证据闸（来源数量、同模型正例检索、量名是否登记、对照变量是否有效、可复跑命令与观测值），'
+          + '改成带证据的写法再写。若这是引用别人的说法，请标明是引用。',
+      }
+    })
+  }
 
   ctx.on('agent/pre-step', async (payload, next) => {
     const decision = await next()

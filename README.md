@@ -25,6 +25,16 @@ re-runnable command.
 It does not judge the claim and it never blocks. Whether three sources are enough
 is a policy question; this plugin only refuses to let the claim pass silently.
 
+## Two modes
+
+| mode | what happens | why |
+|---|---|---|
+| `hardMode: false` (default) | the write lands, then one reminder is injected | the file is already on disk, so the reminder asks for a correction |
+| `hardMode: true` | the write is **refused** by a `tools/pre-execute` guard, with a model-facing reason | the only place a write can actually be stopped |
+
+The guard is opt-in on purpose. A gate that blocks a write on its first day gets
+uninstalled; the reminder mode is how you measure the false-positive rate first.
+
 ## Install
 
 ```

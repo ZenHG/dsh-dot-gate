@@ -3,6 +3,9 @@
     - id: dot-gate
       name: dsh-dot-gate
       config:
+        # false = remind after the write; true = refuse the write before it lands.
+        # Start with false: a gate that blocks on day one gets uninstalled.
+        hardMode: false
         # how many reminders per turn; 0 disables injection entirely
         maxPerTurn: 1
         # only paths containing one of these are inspected

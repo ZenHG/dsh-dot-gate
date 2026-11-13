@@ -131,3 +131,29 @@ test('rejects a scalar where a list belongs', () => {
 test('rejects a negative maxPerTurn', () => {
   assert.throws(() => harness({ maxPerTurn: -1 }), /config\.maxPerTurn must be/)
 })
+
+const preExecute = (h) => h.handlers.get('tools/pre-execute')
+
+test('hardMode is off by default and registers no guard', () => {
+  const h = harness()
+  assert.equal(preExecute(h), undefined)
+})
+
+test('hardMode denies a matching write with a model-facing reason', async () => {
+  const h = harness({ hardMode: true })
+  const decision = await preExecute(h)({ name: 'write', arguments: { file_path: 'Wiki/X.md', content: '这个模型做不到。' } }, async () => ({ kind: 'allow' }))
+  assert.equal(decision.kind, 'deny')
+  assert.match(decision.reason, /做不到/)
+})
+
+test('hardMode lets a neutral write through', async () => {
+  const h = harness({ hardMode: true })
+  const decision = await preExecute(h)({ name: 'write', arguments: { file_path: 'Wiki/X.md', content: '跑了 124 帧。' } }, async () => ({ kind: 'allow' }))
+  assert.equal(decision.kind, 'allow')
+})
+
+test('hardMode ignores tools outside the configured set', async () => {
+  const h = harness({ hardMode: true })
+  const decision = await preExecute(h)({ name: 'read', arguments: { file_path: 'Wiki/X.md' } }, async () => ({ kind: 'allow' }))
+  assert.equal(decision.kind, 'allow')
+})
