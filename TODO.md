@@ -9,6 +9,29 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
       reminder, by contrast, was observed firing in a real turn on 2026-11-13: writing a trigger word
       under `Wiki/` produced the nudge inside the tool result.
 
+- [ ] **Make the public text match the code.** A read-only audit of every user-facing file found flat
+      contradictions, not hedges. In order of damage per line changed:
+      (1) "check ... **before** it writes" (`README.md:3-4`, `package.json:4`, `index.js:3-4`) is false by
+      default - `hardMode` is off, so the write lands first; qualify it with the mode.
+      (2) "**No network, no files, no persistence.**" (`SCOPE.md:35-36`, `README.md:113-115`,
+      `CONTRIBUTING.md:24-26`, `CHANGELOG.md:26`) is contradicted by `readFileSync` of the pack and the
+      skill and by `appendFileSync` for `auditPath`; and "it never blocks" (`README.md:25`,
+      `SCOPE.md:33`) is contradicted by hard mode's deny.
+      (3) "if a hit was never addressed, object once at the close boundary" (`README.md:64`,
+      `CHANGELOG.md:8-9`, `index.js:254-257`) - see the next item, which the audit measured.
+      Also: `skills/dot/SKILL.md:41` promises gate exit codes 0/1/2 from a CLI the package does not ship,
+      and `:31` promises "independent sources, each with a URL and a date" where `sourcesOf` counts
+      distinct URLs only. Criterion: each claim is either true of the shipped default or qualified in
+      one sentence, and no file states a capability the code lacks.
+
+- [ ] **Fix or document that steering cannot fire in the default configuration.** `steerAtTurnEnd`
+      is meant to object at the close boundary when a hit was never addressed. It cannot: the mid-turn
+      reminder runs first and clears the hit (`index.js:287`), so turn-stopping finds nothing. Measured:
+      default config gives 1 reminder and 0 steers; only `maxPerTurn: 0` with `steerAtTurnEnd: true`
+      gives 1 steer. `test.mjs` calls turn-stopping without a pre-step, which is why the suite never
+      saw it. Criterion: either the hit survives until the close boundary so the documented behaviour
+      happens, or the docs say the two keys interact and the test pins that.
+
 - [ ] **Collect 30 labelable hits and have two people label them** - the tooling exists
       (`scripts/labelled-corpus.mjs --export / --score`), so the remaining work is data and judgement,
       not code. Two things must happen first: the host must be restarted so the running plugin emits
