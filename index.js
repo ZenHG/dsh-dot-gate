@@ -19,7 +19,7 @@
  * claim pass silently, and points at whatever gate the project already keeps.
  */
 
-import { readFileSync } from 'node:fs'
+import { appendFileSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -76,6 +76,10 @@ const DEFAULTS = {
   // Off by default: a gate that can block someone's write on its first day gets
   // uninstalled. Turn it on once the false-positive rate is known.
   hardMode: false,
+  // Off by default: the plugin writes no file unless you ask it to. Point this at a
+  // path to get one JSONL line per hit, which is how the false-positive rate gets
+  // measured before hardMode is switched on.
+  auditPath: '',
   maxPerTurn: 1,
   paths: ['Wiki/'],
   tools: ['write', 'edit'],
@@ -113,7 +117,28 @@ function resolveOptions(config) {
   if (!Array.isArray(opts.tools) || opts.tools.some((t) => typeof t !== 'string')) bad('tools', 'an array of strings')
   if (!Number.isInteger(opts.maxPerTurn) || opts.maxPerTurn < 0) bad('maxPerTurn', 'a non-negative integer')
   if (typeof opts.hardMode !== 'boolean') bad('hardMode', 'a boolean')
+  if (typeof opts.auditPath !== 'string') bad('auditPath', 'a string path, or an empty string to disable')
   return opts
+}
+
+/**
+ * Whether the match at `index` sits inside a quotation or a code span.
+ *
+ * A document that *describes* this plugin writes the trigger words inside backticks or
+ * quotes; that is a mention, not a claim. Counting backticks backwards distinguishes
+ * inside from outside, and the paired quote characters cover 「」 and " ".
+ */
+function isQuoted(body, index, length) {
+  const before = body.slice(0, index)
+  const fences = (before.match(/`/g) || []).length
+  if (fences % 2 === 1) return true
+  const prev = before.slice(-1)
+  const next = body.slice(index + length, index + length + 1)
+  const openers = '「『“"\''
+  const closers = '」』”"\''
+  // Empty-string guard: every string includes '', so a match at index 0 would
+  // otherwise be classified as quoted and the gate would never fire on it.
+  return (prev !== '' && openers.includes(prev)) || (next !== '' && closers.includes(next))
 }
 
 function matchCall(args, opts, pattern, prefixes) {
@@ -121,12 +146,30 @@ function matchCall(args, opts, pattern, prefixes) {
   if (path === '') return null
   if (!prefixes.some((pre) => path.includes(pre))) return null
   const body = args.content === undefined ? (args.new_string === undefined ? '' : args.new_string) : args.content
-  const hit = String(body).match(pattern)
-  return hit === null ? null : { word: hit[0], path }
+  const text = String(body)
+  const global = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : pattern.flags + 'g')
+  for (const found of text.matchAll(global)) {
+    if (found.index === undefined) continue
+    if (isQuoted(text, found.index, found[0].length)) continue
+    return { word: found[0], path }
+  }
+  return null
+}
+
+function makeAudit(opts) {
+  if (opts.auditPath === '') return () => {}
+  return (entry) => {
+    try {
+      appendFileSync(opts.auditPath, JSON.stringify({ at: new Date().toISOString(), ...entry }) + '\n', 'utf8')
+    } catch {
+      // An audit failure must never take the gate down with it.
+    }
+  }
 }
 
 export function apply(ctx, config) {
   const opts = resolveOptions(config)
+  const audit = makeAudit(opts)
   const states = new Map()
   const pattern = new RegExp(opts.words.map(escapeRe).join('|'))
   const prefixes = opts.paths.map(normalizePath)
@@ -157,14 +200,10 @@ export function apply(ctx, config) {
     if (!opts.tools.includes(tool)) return
 
     const args = d.arguments === undefined || d.arguments === null ? {} : d.arguments
-    const path = normalizePath(args.file_path === undefined ? (args.path === undefined ? args.file : args.path) : args.file_path)
-    if (path === '') return
-    if (!prefixes.some((pre) => path.includes(pre))) return
-
-    const body = args.content === undefined ? (args.new_string === undefined ? '' : args.new_string) : args.content
-    const m = String(body).match(pattern)
-    if (m === null) return
-    s.hit = { word: m[0], path }
+    const hit = matchCall(args, opts, pattern, prefixes)
+    if (hit === null) return
+    s.hit = { word: hit.word, path: hit.path, tool }
+    audit({ event: 'remind', mode: 'soft', tool, path: hit.path, word: hit.word })
   })
 
   // The reminder above arrives after the file is already on disk. This hook is the
@@ -177,6 +216,7 @@ export function apply(ctx, config) {
       const args = execution.arguments === undefined || execution.arguments === null ? {} : execution.arguments
       const hit = matchCall(args, opts, pattern, prefixes)
       if (hit === null) return next()
+      audit({ event: 'deny', mode: 'hard', tool, path: hit.path, word: hit.word })
       return {
         kind: 'deny',
         reason: 'dot-gate: 这次写入包含判断性措辞「' + hit.word + '」（' + hit.path + '）。'

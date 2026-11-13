@@ -2,6 +2,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { apply, name } from './index.js'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 function harness(config) {
   const handlers = new Map()
@@ -156,4 +159,56 @@ test('hardMode ignores tools outside the configured set', async () => {
   const h = harness({ hardMode: true })
   const decision = await preExecute(h)({ name: 'read', arguments: { file_path: 'Wiki/X.md' } }, async () => ({ kind: 'allow' }))
   assert.equal(decision.kind, 'allow')
+})
+
+test('ignores a trigger word inside a code span', async () => {
+  const h = harness()
+  const s = { id: 'q1' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('我们查的是 `做不到` 这类断言。'))
+  assert.equal((await h.step(s)).messages.length, 0)
+})
+
+test('ignores a trigger word inside corner quotes', async () => {
+  const h = harness()
+  const s = { id: 'q2' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('文中有「做不到」三个字，是在描述机制。'))
+  assert.equal((await h.step(s)).messages.length, 0)
+})
+
+test('still fires when the same word appears outside the quotes', async () => {
+  const h = harness()
+  const s = { id: 'q3' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('提到「做不到」之后，正文又直接断言：这个模型做不到。'))
+  assert.equal((await h.step(s)).messages.length, 1)
+})
+
+test('writes one audit line per hit when auditPath is set', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dotgate-audit-'))
+  const file = join(dir, 'a.jsonl')
+  const h = harness({ auditPath: file })
+  const s = { id: 'a1' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  await h.step(s)
+  const lines = readFileSync(file, 'utf8').trim().split('\n')
+  assert.equal(lines.length, 1)
+  const entry = JSON.parse(lines[0])
+  assert.equal(entry.event, 'remind')
+  assert.equal(entry.mode, 'soft')
+  rmSync(dir, { recursive: true, force: true })
+})
+
+test('writes no audit file when auditPath is empty', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'dotgate-noaudit-'))
+  const file = join(dir, 'a.jsonl')
+  const h = harness({ auditPath: '' })
+  const s = { id: 'a2' }
+  h.emit(s, turnStart)
+  h.emit(s, wikiWrite('这个模型做不到。'))
+  await h.step(s)
+  assert.equal(existsSync(file), false)
+  rmSync(dir, { recursive: true, force: true })
 })
