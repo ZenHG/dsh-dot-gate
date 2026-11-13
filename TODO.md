@@ -23,5 +23,5 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Deliberately not doing
 
-See `SCOPE.md` non-goals. Short version: no client UI, no Rust CLI, no rules referencing
-rules, no model-authored rules.
+See `SCOPE.md` non-goals. Short version: no client UI, no prebuilt native binary, no rules
+referencing rules, no model-authored rules.

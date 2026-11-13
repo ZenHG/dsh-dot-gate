@@ -9,7 +9,7 @@
  *   S1b  history       no token literal in recent commit messages (file scanning is secretlint's job)
  *   S2   local paths   no drive-letter path in the public surface
  *   S2b  identity      the machine's user/host name does not appear in public text
- *   S14  SPDX          every .js / .mjs / .rs / .py carries an SPDX identifier
+ *   S14  SPDX          every .js / .mjs / .cjs carries an SPDX identifier
  *   S18  skills        every SKILL.md has frontmatter with name and description
  *   S16  packaging     .gitignore covers node_modules and *.tgz, no stray tarball
  *   (packaging sanity is publint's job: npm run gate:publint)
@@ -140,7 +140,7 @@ if (identities.length === 0) {
 
 // ---------------------------------------------------------------- S14
 const s14hits = []
-for (const rel of publicFiles.filter((f) => ['.js', '.mjs', '.cjs', '.rs', '.py'].includes(extname(f)))) {
+for (const rel of publicFiles.filter((f) => ['.js', '.mjs', '.cjs'].includes(extname(f)))) {
   const head = readText(rel).split(LF).slice(0, 2).map((l) => l.trim())
   if (!head.some((l) => l.startsWith('// SPDX-License-Identifier:'))) s14hits.push(rel)
 }
