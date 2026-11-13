@@ -1,0 +1,80 @@
+{
+  "$schema": "./pack.schema.json",
+  "schemaVersion": 1,
+  "name": "evidence-for-capability-claims",
+  "description": "What counts as enough evidence before a negative capability claim is written down.",
+  "paths": [
+    "Wiki/"
+  ],
+  "words": [
+    "做不到",
+    "不区分",
+    "不可得",
+    "没有自由度",
+    "cannot be done",
+    "does not work"
+  ],
+  "thresholds": {
+    "minSources": 3,
+    "minRuns": 3
+  },
+  "rules": [
+    "R1",
+    "R2",
+    "R3",
+    "R4",
+    "R5"
+  ],
+  "metrics": {
+    "bgscale.div_ratio": {
+      "status": "active"
+    },
+    "bgscale.div_periph": {
+      "status": "deprecated_as_sole_criterion"
+    },
+    "farband.far_scale_est": {
+      "status": "active"
+    },
+    "farband.far_div_px": {
+      "status": "active"
+    },
+    "h3_facescale.w_frac": {
+      "status": "active"
+    },
+    "qc.ref_scale": {
+      "status": "active_with_caveat"
+    },
+    "qc.ref_dx": {
+      "status": "active"
+    },
+    "qc.ref_dy": {
+      "status": "active"
+    },
+    "qc.ref_rot": {
+      "status": "active"
+    }
+  },
+  "liveVars": {
+    "focal_length_number": {
+      "status": "DEAD"
+    },
+    "lens_model_name": {
+      "status": "DEAD"
+    },
+    "camera_direction_phrase": {
+      "status": "LIVE"
+    },
+    "frames_124": {
+      "status": "LIVE"
+    },
+    "counter_pair": {
+      "status": "TESTED_WEAK"
+    },
+    "steps_20": {
+      "status": "UNKNOWN"
+    },
+    "subject_size_lock_clause": {
+      "status": "TESTED_WEAK"
+    }
+  }
+}

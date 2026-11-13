@@ -46,8 +46,14 @@ export const DEFAULT_LIVE_VARS = {
  */
 export function checkVerdict(v, options) {
   const opts = options === undefined || options === null ? {} : options
-  const metrics = opts.metrics === undefined ? DEFAULT_METRICS : opts.metrics
-  const live = opts.live === undefined ? DEFAULT_LIVE_VARS : opts.live
+  // A pack supplies the data; the inline defaults keep the function usable without one.
+  const pack = opts.pack === undefined || opts.pack === null ? null : opts.pack
+  const metrics = opts.metrics === undefined ? (pack === null ? DEFAULT_METRICS : pack.metrics) : opts.metrics
+  const live = opts.live === undefined ? (pack === null ? DEFAULT_LIVE_VARS : pack.liveVars) : opts.live
+  const minSources = pack === null || pack.thresholds === undefined ? 3 : pack.thresholds.minSources
+  const minRuns = pack === null || pack.thresholds === undefined ? 3 : pack.thresholds.minRuns
+  // `rules` selects; it never describes. Anything richer belongs in code, not in data.
+  const enabled = new Set(pack === null || !Array.isArray(pack.rules) ? ['R1', 'R2', 'R3', 'R4', 'R5'] : pack.rules)
   const fails = []
   const warns = []
   if (v === undefined || v === null) return { fails: ['[R0-SHAPE] no verdict object'], warns, pass: false }
@@ -56,12 +62,12 @@ export function checkVerdict(v, options) {
   const sources = Array.isArray(v.sources) ? v.sources : []
   const urls = new Set(sources.map((s) => (s && s.url ? s.url : null)).filter((u) => u !== null))
 
-  if (urls.size < 3) {
-    fails.push('[R1-SOURCES] ' + urls.size + ' distinct source(s); any conclusion needs at least 3')
+  if (enabled.has('R1') && urls.size < minSources) {
+    fails.push('[R1-SOURCES] ' + urls.size + ' distinct source(s); this pack requires at least ' + minSources)
   }
 
   const probe = v.same_model_positive_search === undefined || v.same_model_positive_search === null ? {} : v.same_model_positive_search
-  if (polarity === 'negative') {
+  if (enabled.has('R2') && polarity === 'negative') {
     if (probe.done !== true) {
       fails.push('[R2-POSITIVE] a negative claim must record same_model_positive_search.done=true')
     }
@@ -70,7 +76,7 @@ export function checkVerdict(v, options) {
     }
   }
 
-  for (const name of Array.isArray(v.metrics) ? v.metrics : []) {
+  for (const name of enabled.has('R3') && Array.isArray(v.metrics) ? v.metrics : []) {
     const entry = metrics[name]
     if (entry === undefined) {
       fails.push('[R3-METRIC] ' + name + ' is not registered (this is how a wrong quantity becomes a wrong conclusion)')
@@ -80,7 +86,7 @@ export function checkVerdict(v, options) {
   }
 
   const contrast = v.contrast === undefined || v.contrast === null ? {} : v.contrast
-  for (const name of Array.isArray(contrast.diff_vars) ? contrast.diff_vars : []) {
+  for (const name of enabled.has('R4') && Array.isArray(contrast.diff_vars) ? contrast.diff_vars : []) {
     const entry = live[name]
     const status = entry === undefined ? 'UNKNOWN' : entry.status
     if (status !== 'LIVE') {
@@ -89,12 +95,14 @@ export function checkVerdict(v, options) {
   }
 
   const repro = v.repro === undefined || v.repro === null ? {} : v.repro
-  if (!repro.cmd) fails.push('[R5-REPRO] missing repro.cmd')
-  if (!repro.observed) fails.push('[R5-REPRO] missing repro.observed')
+  if (enabled.has('R5')) {
+    if (!repro.cmd) fails.push('[R5-REPRO] missing repro.cmd')
+    if (!repro.observed) fails.push('[R5-REPRO] missing repro.observed')
+  }
 
   const tested = v.tested === undefined || v.tested === null ? {} : v.tested
-  if (typeof tested.runs !== 'number' || tested.runs < 3) {
-    warns.push('ran ' + tested.runs + ' time(s); three identical runs is the usual floor')
+  if (typeof tested.runs !== 'number' || tested.runs < minRuns) {
+    warns.push('ran ' + tested.runs + ' time(s); this pack asks for at least ' + minRuns)
   }
 
   return { fails, warns, pass: fails.length === 0 }

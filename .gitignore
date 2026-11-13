@@ -1,7 +1,47 @@
+# --- dependencies -------------------------------------------------------------
 node_modules/
-*.tgz
-.DS_Store
-native/target/
+.pnpm-store/
 
-# Internal research: kept local, never shipped or pushed.
+# --- build & tool output ------------------------------------------------------
+native/target/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# --- packaging artifacts ------------------------------------------------------
+*.tgz
+*.tar.gz
+*.zip
+dsh-dot-gate-*.tgz
+
+# --- logs, local env, editor --------------------------------------------------
+*.log
+npm-debug.log*
+yarn-error.log*
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# --- internal research --------------------------------------------------------
+# Competitor source breakdowns, official-capability notes and paper digests.
+# Kept local on purpose: they quote other projects and carry our own assessment.
+# Nothing here ships in the package either (see package.json "files").
 .research/
+
+# --- local experiments --------------------------------------------------------
+# Packs under test that are not meant to be shared, plus scratch output.
+packs/*.local.json
+packs/*.draft.json
+*.local.*
+scratch/
+tmp/
+
+# --- secrets ------------------------------------------------------------------
+.release_token
+.comfy_registry_token
+.npmrc

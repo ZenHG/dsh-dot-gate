@@ -67,6 +67,20 @@ reloads; Node code does not.
 | `tools` | `["write","edit"]` | tool names to inspect |
 | `words` | see above | any match marks the write as a capability claim |
 
+## Judgement pack
+
+What counts as enough evidence lives in one JSON file, `packs/evidence-for-capability-claims.json`,
+read by both implementations. It carries data only: the words that mark a claim, the watched
+paths, the thresholds, the registered quantities and their liveness.
+
+`rules` **selects** which checks run; it never describes how they work. A pack that started
+describing rule logic would be a rule engine, which is a much larger decision - and one this
+project has already declined once (see `.out-of-scope/vendor-state-machines.md`).
+
+Why one file and not two: the registry used to exist twice, inline in the JS engine and as two
+JSON files next to the Python gate. Nothing compared them. `npm run crosscheck` now prints the
+pack hash it used, so a disagreement about data shows up as a disagreement about verdicts.
+
 ## The skill it ships
 
 The package also contributes a skill named `dot`, through the official skill

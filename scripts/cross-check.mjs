@@ -19,6 +19,8 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { checkVerdict } from '../src/verdict.mjs'
+import { loadPack } from '../src/pack.mjs'
+import { createHash } from 'node:crypto'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const GATE = process.env.VERDICT_GATE_PY || ''
@@ -34,12 +36,17 @@ if (!existsSync(SAMPLES)) {
 }
 
 const files = readdirSync(SAMPLES).filter((n) => n.endsWith('.json'))
+
+// Both implementations must read the same pack, or "they agree" means nothing.
+const { pack, path: packPath } = loadPack()
+const packHash = createHash('sha256').update(readFileSync(packPath)).digest('hex').slice(0, 12)
+console.log('pack=' + pack.name + ' hash=' + packHash)
 let disagree = 0
 for (const name of files) {
   const path = join(SAMPLES, name)
   const sample = JSON.parse(readFileSync(path, 'utf8'))
-  const js = checkVerdict(sample)
-  const py = spawnSync(process.env.PYTHON || 'python', [GATE, path], { encoding: 'utf8' })
+  const js = checkVerdict(sample, { pack })
+  const py = spawnSync(process.env.PYTHON || 'python', [GATE, '--pack', packPath, path], { encoding: 'utf8' })
   const pyPass = py.status === 0
   const same = js.pass === pyPass
   if (!same) disagree += 1

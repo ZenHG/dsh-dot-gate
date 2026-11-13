@@ -36,6 +36,8 @@
 |---|---|---|
 | 任意 `.js` / `.mjs` | `node --check <file>` + `npm test` | 语法与行为 |
 | `src/verdict.mjs`（R1–R5） | `npm test` + `npm run crosscheck`（需 `VERDICT_GATE_PY`） | **双实现必须同结论**；不一致就是漂移 |
+| `packs/*.json`（量名/活性/阈值） | `npm test` + `npm run crosscheck` | 包是**两个实现共读的同一份数据**；改包必须两边都验 |
+| `src/pack.mjs`（包校验） | `npm test` | 坏包必须在加载时报出键名，不能等到规则里才炸 |
 | `index.js` 的钩子 / 配置 | `npm test` + `node scripts/hygiene.mjs` | 配置错误必须抛可读异常，不能静默不装载 |
 | `skills/dot/SKILL.md` 的 frontmatter | `node scripts/hygiene.mjs`（S18） | 缺 `name`/`description` 会让 provider 返回空目录 |
 | `package.json` 的 `files`/`exports` | `npx publint` + `npm run gate:pack` | 打包面错 = 装到别人机器上才炸 |
@@ -83,6 +85,8 @@
 ```
 index.js              宿主半边：钩子与 skill provider
 src/verdict.mjs       规则引擎（JS 实现）
+src/pack.mjs          判据包加载与校验
+packs/                判据包本体：量名 / 变量活性 / 阈值（只有数据，没有逻辑）
 skills/dot/SKILL.md   随包分发的 skill
 samples/              冻结样本，回归集的实体
 scripts/              hygiene / cross-check / pack-verify

@@ -38,6 +38,13 @@ npm run verify
 
 Exit 0 or it does not land. Exit 2 means a gate could not run — that is not a pass.
 
+### Changing the judgement pack
+
+The pack is data shared by both implementations. A change there is a change to `scope`, so:
+bump `schemaVersion` only when the shape changes, and run `npm run crosscheck` afterwards -
+it prints the pack hash, and a verdict disagreement after a pack edit is a drift signal, not
+a test flake.
+
 ## 4 · Record it
 
 - **Accepted**: an entry under `Unreleased` in [CHANGELOG.md](./CHANGELOG.md).
