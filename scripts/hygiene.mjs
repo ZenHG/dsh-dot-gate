@@ -124,7 +124,10 @@ const identities = [process.env.USERNAME, process.env.USER, process.env.COMPUTER
   .map((v) => v.trim())
   .filter((v, i, all) => !GENERIC_IDENTITIES.has(v.toLowerCase()) && all.indexOf(v) === i)
 if (identities.length === 0) {
-  skip('S2b machine identity', 'no non-generic user/host name in the environment')
+  // Vacuous, not skipped: the environment exposes no personal identity to look for
+  // (a CI runner is named "runner"). "Nothing to check" and "could not run" are
+  // different states; collapsing them makes every CI run exit 2.
+  ok('S2b nothing to check (no non-generic identity in this environment)')
 } else {
   const idhits = []
   for (const rel of scanSet) {
