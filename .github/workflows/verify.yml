@@ -15,4 +15,9 @@ jobs:
         with:
           node-version: '22'
       - run: npm ci
+      # npm run verify runs npm test, whose suite list lives in package.json. This guard fails
+      # if the property suite is dropped from that list, so CI cannot silently stop running it.
+      - name: property suite is wired into npm test
+        run: |
+          node -e "const s = require('./package.json').scripts.test; if (!s.includes('test-property.mjs')) { console.error('test-property.mjs is missing from npm test'); process.exit(1) } console.log('npm test: ' + s)"
       - run: npm run verify
