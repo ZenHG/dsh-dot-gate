@@ -4,26 +4,11 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
 
 ## Now
 
-- [ ] **Cover the ten survivors that the score alone does not catch.** The score is 60.80% (650
-      killed / 419 survived of 1069) once the mutation run uses the same command as `npm test`. With a
-      hard-coded three-file command it read 57.06%, because the property suite was left out of the score
-      entirely. Clearing the 60% line is not the same as being safe - these ten are behaviour changes
-      the suite still does not catch, each replayed by hand:
-      `runs >= minRuns` tightened to `>` (`evaluate.mjs:68`); `counter_search_done` forced
-      to return false (`evaluate.mjs:50`); `minSources < 1` rejecting a legal 1 (`pack.mjs:60`);
-      `minRuns < 1` the same (`pack.mjs:61`); an empty `checks: []` accepted (`pack.mjs:42`); a pack
-      with no `rules` key accepted, after which everything passes (`pack.mjs:64`); `probe.hits > 0`
-      loosened to `>=` (`evaluate.mjs:54`); `maxPerTurn < 0` rejecting 0 (`index.js:132`);
-      `words.some` degraded to `every` (`index.js:129`); the interpreter's unknown-atom fallback
-      answering true (`evaluate.mjs:71`). Criterion: each of the ten has a test that goes red when the
-      mutation is replayed.
+- [ ] **Confirm `agent/turn-stopping` steering in a live turn** - the code path is tested but no real
+      turn has been observed taking the extra step. Criterion: one real turn shows it.
 
 ## Next
 
-- [ ] **Domain pack generator** (read-only subagent) - takes a domain description, emits a pack
-      draft, a skill draft and a sample set. Criterion: a human reviews one artefact, not source.
-- [ ] **Confirm `agent/turn-stopping` steering in a live turn** - the code path is tested but no real
-      turn has been observed taking the extra step. Criterion: one real turn shows it.
 - [ ] **Labelled corpus** - 30 real hits from `auditPath`, labelled by two raters; report
       precision, recall and Cohen's kappa with intervals.
 
@@ -38,6 +23,21 @@ State at 2026-11-13. Every item carries a criterion; an item without one is a wi
       Two premises had to be restated because the code disagrees with them: as written, "zero sources
       never passes" and "an unregistered quantity never passes" are false for an arbitrary pack. A third
       was simply wrong - there is no `enabled` flag, so "switched off" can only mean removed.
+- [x] **Domain pack generator** - `scripts/gen-pack.mjs` turns a five-minute domain description into a
+      pack, six fixtures already evaluated against it, and a `REVIEW.md` checklist. It copies the default
+      composition instead of authoring rules, refuses any atom outside the eight by name, requires an
+      evidence floor, and validates the exact bytes it is about to write with the real `validatePack`.
+      `--selftest` covers seven refusal paths. The criterion held: the human reviews the pack and the
+      checklist, not the generator.
+- [x] **The ten survivors have tests, each proven by replay** - apply the mutation, run
+      `test-survivors.mjs`, see it go red, revert. Ten for ten, every run exited 1, every revert left a
+      clean `git diff`. No `src/` change was needed: the defect was always in the tests. Score 63.84%
+      (699 / 1095); a second run of the same tree gave 63.47%, so repeated runs differ by about four
+      mutants and the number deserves one decimal, not three.
+      Two corrections worth keeping: four of the ten had already been killed by the property suite, so
+      60.80% was itself stale by the time it was written down; and every `pack.mjs` line number above
+      moved when A7 landed (42/60/61/64 became 58/76/77/80), which is what happens to line numbers in a
+      document that outlives the code.
 - [x] **A pack without a sources rule is now refused** (DECISIONS.md A7). `thresholds.minSources` was
       mandatory while nothing applied it, so a pack could state an evidence floor and enforce none of
       it. `validatePack` now throws when no rule composes `sources>=minSources` without `over`; the
